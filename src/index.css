@@ -68,15 +68,27 @@
     -webkit-touch-callout: none;
     touch-action: pan-y;
     overscroll-behavior: none;
+    min-height: 100%;
+    height: 100%;
+    overflow: auto;
   }
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
     min-height: 100%;
+    height: 100%;
     width: 100%;
     overflow: auto;
     touch-action: pan-y;
     overscroll-behavior: contain;
+    position: static;
+  }
+
+  #root {
+    min-height: 100%;
+    height: 100%;
+    width: 100%;
+    overflow: auto;
   }
 
   input,
@@ -88,6 +100,7 @@
     -webkit-user-select: text;
     user-select: text;
     touch-action: manipulation;
+    pointer-events: auto;
   }
 
   .input-field {
