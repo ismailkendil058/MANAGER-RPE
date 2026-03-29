@@ -4,7 +4,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import AppLayout from "./components/AppLayout";
-import { usePWAFullscreen } from "./hooks/use-pwa-fullscreen";
 
 import Stocks from "./pages/Stocks";
 import Ventes from "./pages/Ventes";
@@ -18,8 +17,6 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const App = () => {
-  usePWAFullscreen();
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

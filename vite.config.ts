@@ -24,33 +24,57 @@ export default defineConfig(({ mode }) => ({
         theme_color: "#ffffff",
         background_color: "#ffffff",
         display: "standalone",
-        display_override: ["standalone", "browser"],
+        scope: "/",
         start_url: "/",
+        display_override: ["standalone", "fullscreen", "minimal-ui", "browser"],
         icons: [
+          {
+            src: "/favicon.ico",
+            sizes: "64x64",
+            type: "image/x-icon",
+            purpose: "any"
+          },
           {
             src: "/Blue app icon design.jpg?v=2",
             sizes: "192x192",
             type: "image/jpeg",
-            purpose: "maskable",
+            purpose: "any maskable"
           },
           {
             src: "/Blue app icon design.jpg?v=2",
             sizes: "512x512",
             type: "image/jpeg",
-            purpose: "maskable any",
-          },
-          {
-            src: "/Blue app icon design.jpg?v=2",
-            sizes: "512x512",
-            type: "image/jpeg",
-            purpose: "any maskable",
-          },
+            purpose: "any maskable"
+          }
         ],
+        shortcuts: [
+          {
+            name: "Stocks",
+            short_name: "Stocks",
+            description: "Voir les stocks",
+            url: "/stocks",
+            icons: [{ src: "/favicon.ico", sizes: "64x64", type: "image/x-icon" }]
+          },
+          {
+            name: "Ventes",
+            short_name: "Ventes",
+            description: "Voir les ventes",
+            url: "/ventes",
+            icons: [{ src: "/favicon.ico", sizes: "64x64", type: "image/x-icon" }]
+          },
+          {
+            name: "Clients",
+            short_name: "Clients",
+            description: "Voir les clients",
+            url: "/clients",
+            icons: [{ src: "/favicon.ico", sizes: "64x64", type: "image/x-icon" }]
+          }
+        ]
       },
       devOptions: {
-        enabled: true,
-      },
-    }),
+        enabled: true
+      }
+    })
   ],
   resolve: {
     alias: {
