@@ -1,17 +1,93 @@
-import { motion } from 'framer-motion';
-import { ShoppingCart, Plus, FileText, Calendar } from 'lucide-react';
-import { sales, formatDA } from '@/data/mock-data';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ShoppingCart, Plus, FileText, Calendar, X, Check, Trash2 } from 'lucide-react';
+import { sales as initialSales, products, clients, formatDA, Sale } from '@/data/mock-data';
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.04 } } };
 const item = { hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.2 } } };
 
-const Ventes = () => {
-  const totalSales = sales.reduce((sum, s) => sum + s.total, 0);
+interface LineItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
 
-  const grouped = sales.reduce<Record<string, typeof sales>>((acc, sale) => {
+const Ventes = () => {
+  const [saleList, setSaleList] = useState<Sale[]>(initialSales);
+  const [showForm, setShowForm] = useState(false);
+
+  // Form state
+  const [client, setClient] = useState('');
+  const [lines, setLines] = useState<LineItem[]>([
+    { productId: '', productName: '', quantity: 1, unitPrice: 0, total: 0 },
+  ]);
+
+  const totalSales = saleList.reduce((sum, s) => sum + s.total, 0);
+
+  const grouped = saleList.reduce<Record<string, typeof saleList>>((acc, sale) => {
     (acc[sale.date] = acc[sale.date] || []).push(sale);
     return acc;
   }, {});
+
+  const grandTotal = lines.reduce((sum, l) => sum + l.total, 0);
+
+  const updateLine = (index: number, field: keyof LineItem, value: string | number) => {
+    setLines(prev => {
+      const updated = [...prev];
+      const line = { ...updated[index], [field]: value };
+      if (field === 'productId') {
+        const product = products.find(p => p.id === String(value));
+        if (product) {
+          line.productName = product.name;
+          line.unitPrice = product.price;
+          line.total = product.price * line.quantity;
+        }
+      }
+      if (field === 'quantity') {
+        line.quantity = Number(value);
+        line.total = line.unitPrice * Number(value);
+      }
+      updated[index] = line;
+      return updated;
+    });
+  };
+
+  const addLine = () =>
+    setLines(prev => [...prev, { productId: '', productName: '', quantity: 1, unitPrice: 0, total: 0 }]);
+
+  const removeLine = (index: number) =>
+    setLines(prev => prev.filter((_, i) => i !== index));
+
+  const resetForm = () => {
+    setClient('');
+    setLines([{ productId: '', productName: '', quantity: 1, unitPrice: 0, total: 0 }]);
+    setShowForm(false);
+  };
+
+  const handleSubmit = () => {
+    if (!client.trim() || lines.some(l => !l.productId)) return;
+    const today = new Date().toISOString().split('T')[0];
+    const newSale: Sale = {
+      id: `V-${String(saleList.length + 1).padStart(3, '0')}`,
+      date: today,
+      client,
+      products: lines.map(l => ({
+        productId: l.productId,
+        productName: l.productName,
+        quantity: l.quantity,
+        unitPrice: l.unitPrice,
+        total: l.total,
+      })),
+      total: grandTotal,
+      status: 'completed',
+    };
+    setSaleList([newSale, ...saleList]);
+    resetForm();
+  };
+
+  const canSubmit = client.trim() && lines.every(l => l.productId && l.quantity > 0);
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-4">
@@ -20,12 +96,130 @@ const Ventes = () => {
           <h1 className="text-lg font-bold">Ventes</h1>
           <p className="text-xs text-muted-foreground">المبيعات — {formatDA(totalSales)}</p>
         </div>
-        <button className="flex items-center gap-1.5 bg-accent text-accent-foreground px-3 py-2 rounded-lg text-xs font-medium active:scale-95 transition-transform">
+        <button
+          onClick={() => setShowForm(true)}
+          className="flex items-center gap-1.5 bg-accent text-accent-foreground px-3 py-2 rounded-lg text-xs font-medium active:scale-95 transition-transform"
+        >
           <Plus className="w-3.5 h-3.5" />
           Nouvelle
         </button>
       </motion.div>
 
+      {/* New Sale Form */}
+      <AnimatePresence>
+        {showForm && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="glass-card p-4 space-y-4">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ShoppingCart className="w-4 h-4 text-accent" />
+                  <h3 className="text-xs font-semibold">Nouvelle vente</h3>
+                </div>
+                <button onClick={resetForm} className="text-muted-foreground active:scale-90 transition-transform">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Client */}
+              <div>
+                <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1.5 block">Client</label>
+                <select
+                  value={client}
+                  onChange={e => setClient(e.target.value)}
+                  className="input-field w-full h-10"
+                >
+                  <option value="">Sélectionner un client...</option>
+                  {clients.map(c => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Line Items */}
+              <div className="space-y-3">
+                <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium block">Produits</label>
+                {lines.map((line, i) => (
+                  <div key={i} className="flex gap-2 items-start">
+                    <div className="flex-1 space-y-2">
+                      <select
+                        value={line.productId}
+                        onChange={e => updateLine(i, 'productId', e.target.value)}
+                        className="input-field w-full h-10 text-xs"
+                      >
+                        <option value="">Produit...</option>
+                        {products.map(p => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                      {line.productId && (
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1">
+                            <label className="text-[10px] text-muted-foreground mb-1 block">Quantité (kg)</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={line.quantity || ''}
+                              onChange={e => updateLine(i, 'quantity', e.target.value)}
+                              className="input-field w-full h-9 text-sm"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <label className="text-[10px] text-muted-foreground mb-1 block">Sous-total</label>
+                            <div className="input-field h-9 flex items-center text-xs font-semibold text-accent bg-accent/5">
+                              {formatDA(line.total)}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {lines.length > 1 && (
+                      <button
+                        onClick={() => removeLine(i)}
+                        className="mt-1.5 p-2 rounded-lg bg-destructive/10 text-destructive active:scale-90 transition-transform shrink-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  onClick={addLine}
+                  className="w-full py-2 rounded-lg border border-dashed border-border text-xs text-muted-foreground font-medium flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform hover:border-accent/40 hover:text-foreground"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Ajouter un produit
+                </button>
+              </div>
+
+              {/* Total */}
+              {grandTotal > 0 && (
+                <div className="flex items-center justify-between pt-3 border-t border-border/60">
+                  <span className="text-xs text-muted-foreground font-medium">Total</span>
+                  <span className="text-base font-bold text-accent">{formatDA(grandTotal)}</span>
+                </div>
+              )}
+
+              {/* Submit */}
+              <button
+                onClick={handleSubmit}
+                disabled={!canSubmit}
+                className="w-full bg-accent text-accent-foreground py-2.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform disabled:opacity-40"
+              >
+                <Check className="w-4 h-4" />
+                Enregistrer la vente
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Sales List */}
       {Object.entries(grouped)
         .sort(([a], [b]) => b.localeCompare(a))
         .map(([date, daySales]) => (
@@ -55,7 +249,7 @@ const Ventes = () => {
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-xs font-bold">{formatDA(sale.total)}</p>
-                      <button className="text-muted-foreground hover:text-foreground mt-1">
+                      <button className="text-muted-foreground mt-1">
                         <FileText className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -63,7 +257,7 @@ const Ventes = () => {
                   <div className="mt-2 pt-2 border-t border-border/50">
                     {sale.products.map((p, i) => (
                       <p key={i} className="text-[11px] text-muted-foreground">
-                        {p.productName} × {p.quantity} — {formatDA(p.total)}
+                        {p.productName} × {p.quantity} kg — {formatDA(p.total)}
                       </p>
                     ))}
                   </div>

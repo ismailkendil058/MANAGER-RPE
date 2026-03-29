@@ -1,7 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  LayoutDashboard,
   Package,
   ShoppingCart,
   Users,
@@ -10,11 +9,11 @@ import {
 } from 'lucide-react';
 
 const navItems = [
-  { path: '/', label: 'Accueil', icon: LayoutDashboard },
   { path: '/stocks', label: 'Stocks', icon: Package },
   { path: '/ventes', label: 'Ventes', icon: ShoppingCart },
   { path: '/clients', label: 'Clients', icon: Users },
-  { path: '/fournisseurs', label: 'Fourn.', icon: Truck },
+  { path: '/fournisseurs', label: 'Achat.', icon: ShoppingCart },
+
   { path: '/rapports', label: 'Rapports', icon: BarChart3 },
 ];
 

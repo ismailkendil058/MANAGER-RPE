@@ -6,7 +6,6 @@ import {
   ShoppingCart,
   DollarSign,
   ArrowUpRight,
-  Star,
   CalendarIcon,
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -31,17 +30,13 @@ const Dashboard = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date('2026-03-28'));
   const totalProfit = monthlyRevenue.reduce((sum, m) => sum + m.profit, 0);
   const stockValue = products.reduce((sum, p) => sum + p.price * p.quantity, 0);
-  
+
   const dateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
   const todaySales = sales.filter(s => s.date === '2026-03-28');
   const todayRevenue = todaySales.reduce((sum, s) => sum + s.total, 0);
   const filteredSales = selectedDate ? sales.filter(s => s.date === dateStr) : sales;
 
-  const productSales: Record<string, number> = {};
-  sales.forEach(s => s.products.forEach(p => {
-    productSales[p.productName] = (productSales[p.productName] || 0) + p.quantity;
-  }));
-  const bestProduct = Object.entries(productSales).sort((a, b) => b[1] - a[1])[0];
+
 
   const kpis = [
     { title: 'Revenus', titleAr: 'إيرادات', value: formatDA(27800000), change: '+12.4%', icon: DollarSign, color: 'text-accent' },
@@ -105,17 +100,6 @@ const Dashboard = () => {
         </ResponsiveContainer>
       </motion.div>
 
-      {/* Best Product */}
-      <motion.div variants={item} className="kpi-card !p-4 flex items-center gap-3">
-        <div className="p-2 rounded-lg bg-warning/10">
-          <Star className="w-4 h-4 text-warning" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Plus vendu</p>
-          <p className="text-sm font-bold truncate">{bestProduct?.[0]}</p>
-        </div>
-        <span className="text-xs font-semibold text-accent">{bestProduct?.[1]} unités</span>
-      </motion.div>
 
 
       {/* Recent Sales */}

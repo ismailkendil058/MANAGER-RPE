@@ -2,14 +2,16 @@ export interface Product {
   id: string;
   name: string;
   nameAr: string;
-  category: string;
-  categoryAr: string;
+  category?: string;
+  categoryAr?: string;
   weight: string;
-  quantity: number;
-  price: number;
-  supplier: string;
+  quantity?: number;
+
+  price?: number;
+  supplier?: string;
   minStock: number;
 }
+
 
 export interface Sale {
   id: string;
@@ -37,6 +39,16 @@ export interface Supplier {
   totalOrders: number;
   totalSpent: number;
 }
+
+export interface PurchaseOrder {
+  id: string;
+  date: string;
+  supplier: string;
+  products: { productId: string; productName: string; quantity: number; unitPrice: number; total: number }[];
+  total: number;
+  status: 'completed' | 'pending';
+}
+
 
 export const products: Product[] = [
   { id: '1', name: 'Fer rond 10mm', nameAr: 'حديد مستدير 10مم', category: 'Fer rond', categoryAr: 'حديد مستدير', weight: '10mm - 12m', quantity: 450, price: 85000, supplier: 'ArcelorMittal', minStock: 50 },
@@ -66,6 +78,13 @@ export const suppliers: Supplier[] = [
   { id: '4', name: 'IMETAL', phone: '021 63 45 67', address: 'Alger', totalOrders: 18, totalSpent: 12000000 },
 ];
 
+export const purchases: PurchaseOrder[] = [
+  { id: 'A-1234', date: '2026-03-28', supplier: 'ArcelorMittal Annaba', products: [{ productId: '1', productName: 'Fer rond 10mm', quantity: 100, unitPrice: 85000, total: 8500000 }], total: 8500000, status: 'completed' },
+  { id: 'A-5678', date: '2026-03-27', supplier: 'TOSYALI Algérie', products: [{ productId: '3', productName: 'Fer rond 16mm', quantity: 50, unitPrice: 125000, total: 6250000 }, { productId: '6', productName: 'Cornière 40x40', quantity: 80, unitPrice: 38000, total: 3040000 }], total: 9290000, status: 'completed' },
+  { id: 'A-9012', date: '2026-03-26', supplier: 'ALFAPIPE', products: [{ productId: '4', productName: 'Tube carré 40x40', quantity: 200, unitPrice: 45000, total: 9000000 }], total: 9000000, status: 'pending' },
+];
+
+
 export const sales: Sale[] = [
   { id: 'V-001', date: '2026-03-28', client: 'SARL Bâtiment Plus', products: [{ productId: '1', productName: 'Fer rond 10mm', quantity: 50, unitPrice: 85000, total: 4250000 }], total: 4250000, status: 'completed' },
   { id: 'V-002', date: '2026-03-28', client: 'ETS Benali', products: [{ productId: '4', productName: 'Tube carré 40x40', quantity: 30, unitPrice: 45000, total: 1350000 }], total: 1350000, status: 'completed' },
@@ -86,3 +105,4 @@ export const monthlyRevenue = [
 export const formatDA = (amount: number): string => {
   return new Intl.NumberFormat('fr-DZ', { minimumFractionDigits: 0 }).format(amount) + ' DA';
 };
+

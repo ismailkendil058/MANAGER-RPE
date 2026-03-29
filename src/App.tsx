@@ -4,11 +4,12 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import AppLayout from "./components/AppLayout";
-import Dashboard from "./pages/Dashboard";
+
 import Stocks from "./pages/Stocks";
 import Ventes from "./pages/Ventes";
 import Clients from "./pages/Clients";
-import Fournisseurs from "./pages/Fournisseurs";
+import Achats from "./pages/Achats";
+
 import Rapports from "./pages/Rapports";
 import NotFound from "./pages/NotFound";
 
@@ -21,11 +22,12 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<AppLayout><Dashboard /></AppLayout>} />
+          <Route path="/" element={<AppLayout><Stocks /></AppLayout>} />
           <Route path="/stocks" element={<AppLayout><Stocks /></AppLayout>} />
           <Route path="/ventes" element={<AppLayout><Ventes /></AppLayout>} />
           <Route path="/clients" element={<AppLayout><Clients /></AppLayout>} />
-          <Route path="/fournisseurs" element={<AppLayout><Fournisseurs /></AppLayout>} />
+          <Route path="/fournisseurs" element={<AppLayout><Achats /></AppLayout>} />
+
           <Route path="/rapports" element={<AppLayout><Rapports /></AppLayout>} />
           <Route path="*" element={<NotFound />} />
         </Routes>

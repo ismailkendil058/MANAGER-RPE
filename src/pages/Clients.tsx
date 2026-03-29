@@ -96,7 +96,7 @@ const Clients = () => {
                   <div className="space-y-1 mb-2">
                     {sale.products.map((p, i) => (
                       <div key={i} className="flex items-center justify-between text-[11px]">
-                        <span className="text-muted-foreground">{p.productName} × {p.quantity}</span>
+                        <span className="text-muted-foreground">{p.productName} × {p.quantity} kg</span>
                         <span className="font-medium">{formatDA(p.total)}</span>
                       </div>
                     ))}

@@ -1,0 +1,1 @@
+# Task: Move Nouvelle Achat button to top header like Ventes\n\n## Steps:\n\n### 1. [x] Create TODO.md with plan steps\n### 2. Update Achats.tsx header to flex layout with button on right\n### 3. Remove FAB and rewire Dialog trigger to header button\n### 4. Test and verify positioning matches Ventes\n### 5. Mark complete and attempt_completion\n\nProgress tracked here.
