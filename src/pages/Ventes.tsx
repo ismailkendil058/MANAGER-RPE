@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, Plus, FileText, Calendar, X, Check, Trash2 } from 'lucide-react';
-import { sales as initialSales, products, clients, formatDA, Sale } from '@/data/mock-data';
+import { products, clients, formatDA, Sale } from '@/data/mock-data';
+import { useSales } from '@/data/use-sales';
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.04 } } };
 const item = { hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.2 } } };
@@ -15,7 +16,7 @@ interface LineItem {
 }
 
 const Ventes = () => {
-  const [saleList, setSaleList] = useState<Sale[]>(initialSales);
+  const [sales, setSales] = useSales();
   const [showForm, setShowForm] = useState(false);
 
   // Form state
@@ -24,9 +25,9 @@ const Ventes = () => {
     { productId: '', productName: '', quantity: 1, unitPrice: 0, total: 0 },
   ]);
 
-  const totalSales = saleList.reduce((sum, s) => sum + s.total, 0);
+  const totalSales = sales.reduce((sum, s) => sum + s.total, 0);
 
-  const grouped = saleList.reduce<Record<string, typeof saleList>>((acc, sale) => {
+  const grouped = sales.reduce<Record<string, typeof sales>>((acc, sale) => {
     (acc[sale.date] = acc[sale.date] || []).push(sale);
     return acc;
   }, {});
@@ -70,7 +71,7 @@ const Ventes = () => {
     if (!client.trim() || lines.some(l => !l.productId)) return;
     const today = new Date().toISOString().split('T')[0];
     const newSale: Sale = {
-      id: `V-${String(saleList.length + 1).padStart(3, '0')}`,
+      id: `V-${String(sales.length + 1).padStart(3, '0')}`,
       date: today,
       client,
       products: lines.map(l => ({
@@ -83,7 +84,7 @@ const Ventes = () => {
       total: grandTotal,
       status: 'completed',
     };
-    setSaleList([newSale, ...saleList]);
+    setSales(s => [newSale, ...s]);
     resetForm();
   };
 
@@ -220,7 +221,7 @@ const Ventes = () => {
       </AnimatePresence>
 
       {/* Sales List */}
-      {Object.entries(grouped)
+{Object.entries(grouped)
         .sort(([a], [b]) => b.localeCompare(a))
         .map(([date, daySales]) => (
           <motion.div key={date} variants={item} className="space-y-2">

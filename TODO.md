@@ -1,1 +1,8 @@
-# Task: Move Nouvelle Achat button to top header like Ventes\n\n## Steps:\n\n### 1. [x] Create TODO.md with plan steps\n### 2. Update Achats.tsx header to flex layout with button on right\n### 3. Remove FAB and rewire Dialog trigger to header button\n### 4. Test and verify positioning matches Ventes\n### 5. Mark complete and attempt_completion\n\nProgress tracked here.
+# Task: Auto-add new vente from Ventes section to client history in Clients section
+
+## Steps:
+- [x] 1. Created src/data/use-sales.ts hook for shared sales state
+- [x] 2. Updated Ventes.tsx to use useSales()
+- [x] 3. Updated Clients.tsx to use shared sales from useSales()
+- [ ] 4. Test: Run dev server, add sale with client in Ventes, check Clients history for that client
+- [ ] 5. Complete task

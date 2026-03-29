@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, MapPin, Plus, X, ChevronRight, ShoppingCart, ArrowLeft, UserPlus } from 'lucide-react';
-import { clients as initialClients, sales, formatDA, Client } from '@/data/mock-data';
+import { clients as initialClients, formatDA, Client } from '@/data/mock-data';
+import { useSales } from '@/data/use-sales';
+import type { Sale } from '@/data/mock-data';
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
 const item = { hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.2 } } };
@@ -27,8 +29,9 @@ const Clients = () => {
     setShowForm(false);
   };
 
+  const [sharedSales] = useSales();
   const clientSales = selectedClient
-    ? sales.filter(s => s.client === selectedClient.name)
+    ? sharedSales.filter(s => s.client === selectedClient.name)
     : [];
 
   // Client detail view

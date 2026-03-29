@@ -8,11 +8,22 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { formatDA } from '@/data/mock-data';
-import { purchases, suppliers, products, PurchaseOrder, Supplier, Product } from '@/data/mock-data';
+import { purchases, suppliers, products, Supplier, Product } from '@/data/mock-data';
 import { zodResolver } from '@hookform/resolvers/zod';
+import type { PurchaseOrder } from '@/data/mock-data';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import type { PurchaseOrder } from '@/data/mock-data';
+
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
 const item = { hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.2 } } };
@@ -31,6 +42,8 @@ type FormValues = z.infer<typeof formSchema>;
 
 const Achats = () => {
   const [localPurchases, setLocalPurchases] = useState<PurchaseOrder[]>(purchases);
+
+  const [selectedPurchase, setSelectedPurchase] = useState<PurchaseOrder | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -220,7 +233,14 @@ const Achats = () => {
 
       <div className="space-y-3">
         {localPurchases.slice(0, 10).map((purchase) => (
-          <motion.div key={purchase.id} variants={item} className="glass-card p-4 active:scale-[0.98] transition-transform">
+          <motion.div 
+            key={purchase.id} 
+            variants={item} 
+            className="glass-card p-4 cursor-pointer hover:bg-accent/20 active:scale-[0.98] transition-all duration-200" 
+            role="button"
+            tabIndex={0}
+            onClick={() => setSelectedPurchase(purchase)}
+          >
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
                 <ShoppingBag className="w-5 h-5 text-primary" strokeWidth={1.8} />
@@ -255,6 +275,69 @@ const Achats = () => {
           </motion.div>
         )}
       </div>
+
+      {/* Purchase Details Dialog */}
+      <Dialog open={!!selectedPurchase} onOpenChange={() => setSelectedPurchase(null)}>
+        <DialogTrigger />
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+          {selectedPurchase && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="p-6 pb-4 border-b">Détails Bon d&#x27;achat #{selectedPurchase.id}</DialogTitle>
+              </DialogHeader>
+              <div className="p-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Truck className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="font-medium">Fournisseur:</span>
+                    <span className="font-semibold">{selectedPurchase.supplier}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="font-medium">Date:</span>
+                    <span className="font-semibold">{new Date(selectedPurchase.date).toLocaleDateString('fr-DZ')}</span>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Produit</TableHead>
+                        <TableHead className="w-20 text-right">Qté</TableHead>
+                        <TableHead className="w-32 text-right">Prix unitaire</TableHead>
+                        <TableHead className="w-32 text-right">Sous-total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedPurchase.products.map((prod, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell className="font-medium">{prod.productName}</TableCell>
+                          <TableCell className="text-right font-mono">{prod.quantity}</TableCell>
+                          <TableCell className="text-right">{formatDA(prod.unitPrice)}</TableCell>
+                          <TableCell className="text-right font-bold">{formatDA(prod.total)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <div className="pt-4 border-t flex flex-col sm:flex-row justify-between items-end gap-3">
+                  <Badge variant={selectedPurchase.status === 'completed' ? 'default' : 'secondary'} className="text-xs">
+                    {selectedPurchase.status === 'completed' ? 'Terminé' : 'En attente'}
+                  </Badge>
+                  <div className="text-right">
+                    <p className="text-sm text-muted-foreground mb-1">Grand Total</p>
+                    <p className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+                      {formatDA(selectedPurchase.total)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 };
