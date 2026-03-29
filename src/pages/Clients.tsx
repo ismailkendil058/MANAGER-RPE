@@ -1,38 +1,33 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, MapPin, Plus, X, ChevronRight, ShoppingCart, ArrowLeft, UserPlus } from 'lucide-react';
-import { formatDA, Client } from '@/data/mock-data';
+import { formatDA } from '@/data/mock-data';
 import { useClients } from '@/data/use-clients';
 import { useSales } from '@/data/use-sales';
-import type { Sale } from '@/data/mock-data';
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
 const item = { hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.2 } } };
 
 const Clients = () => {
-const [clientList, updateClients] = useClients();
+const { clientsState: clientList, loading: clientsLoading, fetchClients, addClient } = useClients();
+  const { salesState: sharedSales, loading: salesLoading, fetchSales } = useSales();
   const [showForm, setShowForm] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [selectedClient, setSelectedClient] = useState<any | null>(null);
   const [form, setForm] = useState({ name: '', phone: '', address: '' });
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!form.name.trim()) return;
-    const newClient: Client = {
-      id: String(clientList.length + 1),
-      name: form.name,
-      phone: form.phone,
-      address: form.address,
-      totalSpent: 0,
-      totalOrders: 0,
-    };
-    updateClients(c => [newClient, ...c]);
-    setForm({ name: '', phone: '', address: '' });
-    setShowForm(false);
+    try {
+      await addClient({ name: form.name, phone: form.phone, address: form.address });
+      setForm({ name: '', phone: '', address: '' });
+      setShowForm(false);
+    } catch (error) {
+      console.error('Failed to add client:', error);
+    }
   };
 
-  const [sharedSales] = useSales();
   const clientSales = selectedClient
-    ? sharedSales.filter(s => s.client === selectedClient.name)
+    ? sharedSales.filter(s => s.client_name === selectedClient.name)
     : [];
 
   // Client detail view
@@ -100,7 +95,7 @@ const [clientList, updateClients] = useClients();
                   <div className="space-y-1 mb-2">
                     {sale.products.map((p, i) => (
                       <div key={i} className="flex items-center justify-between text-[11px]">
-                        <span className="text-muted-foreground">{p.productName} × {p.quantity} kg</span>
+                        <span className="text-muted-foreground">{p.product_name} × {p.quantity} kg</span>
                         <span className="font-medium">{formatDA(p.total)}</span>
                       </div>
                     ))}

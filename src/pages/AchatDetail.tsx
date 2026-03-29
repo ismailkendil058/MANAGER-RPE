@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ShoppingBag, ArrowLeft, Calendar, Truck, Package } from 'lucide-react';
-import { formatDA, PurchaseOrder } from '@/data/mock-data';
+import { formatDA } from '@/data/mock-data';
 import { usePurchases } from '@/data/use-purchases';
 
 const AchatDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [purchases] = usePurchases();
-  const [purchase, setPurchase] = useState<PurchaseOrder | null>(null);
+  const { purchasesState: purchases } = usePurchases();
+  const [purchase, setPurchase] = useState<any | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -69,7 +69,7 @@ const AchatDetail = () => {
           <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
             <div className="flex items-center justify-center gap-1 py-1.5 px-2.5 bg-background/60 rounded-lg">
               <Truck className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="font-medium truncate max-w-[120px]">{purchase.supplier}</span>
+              <span className="font-medium truncate max-w-[120px]">{purchase.supplier_name}</span>
             </div>
             <div className="flex items-center justify-center gap-1 py-1.5 px-2.5 bg-background/60 rounded-lg">
               <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
@@ -89,9 +89,9 @@ const AchatDetail = () => {
           {purchase.products.map((product, index) => (
             <div key={index} className="glass-card p-3 rounded-lg bg-surface/40 border-border/10">
               <div className="space-y-1">
-                <div className="font-medium text-xs leading-tight mb-1 min-h-[32px]">{product.productName}</div>
+                <div className="font-medium text-xs leading-tight mb-1 min-h-[32px]">{product.product_name}</div>
                 <div className="grid grid-cols-4 gap-2 text-[10px] text-muted-foreground items-center">
-                  <span className="font-mono col-span-2 text-left">{product.quantity}kg × {formatDA(product.unitPrice)}</span>
+                  <span className="font-mono col-span-2 text-left">{product.quantity}kg × {formatDA(product.unit_price)}</span>
                   <span className="font-bold text-accent text-right col-span-2">{formatDA(product.total)}</span>
                 </div>
               </div>

@@ -11,7 +11,10 @@ import {
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { products, sales, monthlyRevenue, formatDA } from '@/data/mock-data';
+import { formatDA } from '@/data/mock-data';
+import { useStocks } from '@/data/use-stocks';
+import { useSales } from '@/data/use-sales';
+import { monthlyRevenue } from '@/data/mock-data';
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -28,15 +31,16 @@ const item = {
 
 const Dashboard = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date('2026-03-28'));
+  const { stocksState: products } = useStocks();
+  const { salesState: sales } = useSales();
+
   const totalProfit = monthlyRevenue.reduce((sum, m) => sum + m.profit, 0);
-  const stockValue = products.reduce((sum, p) => sum + p.price * p.quantity, 0);
+  const stockValue = products.reduce((sum, p) => sum + (p.price || 0) * (p.quantity || 0), 0);
 
   const dateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
   const todaySales = sales.filter(s => s.date === '2026-03-28');
   const todayRevenue = todaySales.reduce((sum, s) => sum + s.total, 0);
   const filteredSales = selectedDate ? sales.filter(s => s.date === dateStr) : sales;
-
-
 
   const kpis = [
     { title: 'Revenus', titleAr: 'إيرادات', value: formatDA(27800000), change: '+12.4%', icon: DollarSign, color: 'text-accent' },
@@ -47,15 +51,6 @@ const Dashboard = () => {
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-4">
-      <motion.div variants={item}>
-        <h1 className="text-lg font-bold">Tableau de bord</h1>
-        <p className="text-xs text-muted-foreground">لوحة القيادة — Vue d'ensemble</p>
-      </motion.div>
-
-      {/* KPI Grid - 2x2 */}
-      <div className="grid grid-cols-2 gap-3">
-        {kpis.map((kpi, i) => (
-          <motion.div key={i} variants={item} className="kpi-card !p-4">
             <div className="flex items-center justify-between mb-2">
               <div className={`p-1.5 rounded-md bg-surface ${kpi.color}`}>
                 <kpi.icon className="w-3.5 h-3.5" strokeWidth={2} />

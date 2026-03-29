@@ -1,42 +1,49 @@
-import { useState, useEffect } from 'react';
-import { clients as initialClients, Client, Sale } from './mock-data';
-import { useSales } from './use-sales';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+
+export interface Client {
+  id: string;
+  name: string;
+  phone: string;
+  address: string;
+  totalSpent: number;
+  totalOrders: number;
+}
 
 export const useClients = () => {
-  const [clientsState, updateClientsInternal] = useState<Client[]>(initialClients);
-  const [sales] = useSales();
+  const [clientsState, setClientsState] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Recompute client totals based on sales when sales change
-  useEffect(() => {
-    const newTotals = clientsState.map(client => {
-      const clientSales = sales.filter(s => s.client === client.name);
-      const totalSpent = clientSales.reduce((sum, s) => sum + s.total, 0);
-      const totalOrders = clientSales.length;
-      return { totalSpent, totalOrders };
-    });
-
-    // Only update if totals actually changed
-    const hasChanges = clientsState.some((client, index) => 
-      client.totalSpent !== newTotals[index].totalSpent || 
-      client.totalOrders !== newTotals[index].totalOrders
-    );
-
-    if (hasChanges) {
-      const updatedClients = clientsState.map((client, index) => ({
-        ...client,
-        totalSpent: newTotals[index].totalSpent,
-        totalOrders: newTotals[index].totalOrders
-      }));
-      updateClientsInternal(updatedClients);
+  const fetchClients = async () => {
+    setLoading(true);
+    const { data, error } = await supabase.from('clients').select('*').order('name', { ascending: true });
+    if (error) {
+      console.error('Failed to fetch clients:', error);
+      setLoading(false);
+      return;
     }
-  }, [sales]);
-
-  const updateClients = (updater: (current: Client[]) => Client[]) => {
-    const newClients = updater(clientsState);
-    updateClientsInternal(newClients);
+    setClientsState(data ?? []);
+    setLoading(false);
   };
 
-  return [clientsState, updateClients] as const;
+  useEffect(() => {
+    fetchClients();
+  }, []);
+
+  const addClient = async (client: Omit<Client, 'id' | 'totalSpent' | 'totalOrders'>) => {
+    const id = String(Date.now());
+    const { error } = await supabase.from('clients').insert([{ ...client, id, totalSpent: 0, totalOrders: 0 }]);
+    if (error) throw error;
+    await fetchClients();
+  };
+
+  const updateClient = async (id: string, updates: Partial<Client>) => {
+    const { error } = await supabase.from('clients').update(updates).eq('id', id);
+    if (error) throw error;
+    await fetchClients();
+  };
+
+  return { clientsState, loading, fetchClients, addClient, updateClient };
 };
 
 

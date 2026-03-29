@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, Plus, FileText, Calendar, X, Check, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { products, formatDA, Sale, Client } from '@/data/mock-data';
+import { formatDA } from '@/data/mock-data';
 import { useClients } from '@/data/use-clients';
 import { useSales } from '@/data/use-sales';
 import { useStocks } from '@/data/use-stocks';
@@ -20,9 +20,9 @@ interface LineItem {
 
 const Ventes = () => {
   const navigate = useNavigate();
-  const [sales, setSales] = useSales();
-  const [stocksState, updateStocks] = useStocks();
-  const [clientsList, updateClients] = useClients();
+  const { salesState: sales, loading: salesLoading, fetchSales, addSale } = useSales();
+  const { stocksState, loading: stocksLoading, fetchStocks } = useStocks();
+  const { clientsState: clientsList, loading: clientsLoading, fetchClients, updateClient } = useClients();
   const [showForm, setShowForm] = useState(false);
 
   // Form state
@@ -45,7 +45,7 @@ const Ventes = () => {
       const updated = [...prev];
       const line = { ...updated[index], [field]: value };
       if (field === 'productId') {
-        const product = products.find(p => p.id === String(value));
+        const product = stocksState.find(p => p.id === String(value));
         if (product) {
           line.productName = product.name;
         }
@@ -72,48 +72,41 @@ const Ventes = () => {
     setShowForm(false);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!client.trim() || lines.some(l => !l.productId)) return;
     const today = new Date().toISOString().split('T')[0];
-    const newSale: Sale = {
-      id: `V-${String(sales.length + 1).padStart(3, '0')}`,
+
+    const clientRecord = clientsList.find(c => c.name === client);
+
+    const newSale = {
       date: today,
-      client,
+      client_id: clientRecord ? clientRecord.id : null,
+      client_name: client,
       products: lines.map(l => ({
-        productId: l.productId,
-        productName: l.productName,
+        product_id: l.productId,
+        product_name: l.productName,
         quantity: l.quantity,
-        unitPrice: l.unitPrice,
+        unit_price: l.unitPrice,
         total: l.total,
       })),
       total: grandTotal,
-      status: 'completed',
+      status: 'completed' as const,
     };
-    setSales(s => [newSale, ...s]);
-    
-    // Update client totals
-    const targetClient = clientsList.find(c => c.name === client);
-    if (targetClient) {
-      updateClients(c => 
-        c.map(cl => 
-          cl.name === client 
-            ? { ...cl, totalSpent: cl.totalSpent + grandTotal, totalOrders: cl.totalOrders + 1 }
-            : cl
-        )
-      );
+
+    try {
+      await addSale(newSale);
+      if (clientRecord) {
+        await updateClient(clientRecord.id, {
+          totalSpent: clientRecord.totalSpent + grandTotal,
+          totalOrders: clientRecord.totalOrders + 1,
+        });
+      }
+      await fetchStocks();
+      await fetchClients();
+      resetForm();
+    } catch (error) {
+      console.error('Failed to add sale:', error);
     }
-    
-    // Auto-update stock: decrement quantities sold
-    updateStocks(currentStocks =>
-      currentStocks.map(product => {
-        const line = newSale.products.find(p => p.productId === product.id);
-        return line 
-          ? { ...product, quantity: Math.max(0, (product.quantity || 0) - line.quantity) }
-          : product;
-      })
-    );
-    
-    resetForm();
   };
 
   const canSubmit = client.trim() && lines.every(l => l.productId && l.quantity > 0);
@@ -182,7 +175,7 @@ const Ventes = () => {
                         className="input-field w-full h-10 text-xs"
                       >
                         <option value="">Produit...</option>
-                        {products.map(p => (
+                        {stocksState.map(p => (
                           <option key={p.id} value={p.id}>{p.name}</option>
                         ))}
                       </select>
@@ -286,7 +279,7 @@ const Ventes = () => {
                           {sale.status === 'completed' ? 'Complétée' : 'En attente'}
                         </span>
                       </div>
-                      <p className="text-[11px] text-muted-foreground truncate">{sale.client}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{sale.client_name}</p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-xs font-bold">{formatDA(sale.total)}</p>
@@ -302,7 +295,7 @@ const Ventes = () => {
                   <div className="mt-2 pt-2 border-t border-border/50">
                     {sale.products.map((p, i) => (
                       <p key={i} className="text-[11px] text-muted-foreground">
-                        {p.productName} × {p.quantity} kg — {formatDA(p.total)}
+                        {p.product_name} × {p.quantity} kg — {formatDA(p.total)}
                       </p>
                     ))}
                   </div>

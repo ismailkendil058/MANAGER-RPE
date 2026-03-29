@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, Plus, FileText, Calendar, X, Check, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { products, suppliers, formatDA, PurchaseOrder } from '@/data/mock-data';
+import { formatDA } from '@/data/mock-data';
 import { usePurchases } from '@/data/use-purchases';
 import { useStocks } from '@/data/use-stocks';
+import { useSuppliers } from '@/data/use-suppliers';
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.04 } } };
 const item = { hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.2 } } };
@@ -19,9 +20,9 @@ interface LineItem {
 
 const Achats = () => {
   const navigate = useNavigate();
-  const [purchases, setPurchases] = usePurchases();
-  const [stocksState, updateStocks] = useStocks();
-  const [suppliersState, setSuppliersState] = useState(suppliers);
+  const { purchasesState: purchases, loading: purchasesLoading, fetchPurchases, addPurchase } = usePurchases();
+  const { stocksState, loading: stocksLoading, fetchStocks } = useStocks();
+  const { suppliersState, loading: suppliersLoading, fetchSuppliers, addSupplier } = useSuppliers();
   const [showForm, setShowForm] = useState(false);
 
   // Form state
@@ -46,7 +47,7 @@ const Achats = () => {
       const updated = [...prev];
       const line = { ...updated[index], [field]: value };
       if (field === 'productId') {
-        const product = products.find(p => p.id === String(value));
+        const product = stocksState.find(p => p.id === String(value));
         if (product) {
           line.productName = product.name;
         }
@@ -75,53 +76,48 @@ const Achats = () => {
     setShowForm(false);
   };
 
-  const addNewSupplier = () => {
+  const addNewSupplier = async () => {
     if (!newSupplierName.trim()) return;
-    const newId = `F-${String(suppliersState.length + 1).padStart(3, '0')}`;
-    const newSupplier = {
-      id: newId,
-      name: newSupplierName,
-      phone: '',
-      address: '',
-      totalOrders: 0,
-      totalSpent: 0,
-    };
-    setSuppliersState(prev => [newSupplier, ...prev]);
-    setSupplier(newId);
-    setNewSupplierName('');
-    setShowAddSupplier(false);
+    try {
+      await addSupplier({ name: newSupplierName, phone: '', address: '' });
+      await fetchSuppliers();
+      const newSupp = suppliersState.find(s => s.name === newSupplierName);
+      if (newSupp) setSupplier(newSupp.id);
+      setNewSupplierName('');
+      setShowAddSupplier(false);
+    } catch (error) {
+      console.error('Failed to add supplier:', error);
+    }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!supplier.trim() || lines.some(l => !l.productId)) return;
     const today = new Date().toISOString().split('T')[0];
-    const newPurchase: PurchaseOrder = {
-      id: `A-${String(purchases.length + 1).padStart(4, '0')}`,
+    const supplierRecord = suppliersState.find(s => s.id === supplier);
+
+    const newPurchase = {
       date: today,
-      supplier: suppliersState.find(s => s.id === supplier)?.name || supplier,
+      supplier_id: supplier,
+      supplier_name: supplierRecord?.name || supplier,
       products: lines.map(l => ({
-        productId: l.productId,
-        productName: l.productName,
+        product_id: l.productId,
+        product_name: l.productName,
         quantity: l.quantity,
-        unitPrice: l.unitPrice,
+        unit_price: l.unitPrice,
         total: l.total,
       })),
       total: grandTotal,
       status: 'completed' as const,
     };
-    setPurchases(p => [newPurchase, ...p]);
-    
-    // Auto-update stock quantities
-    updateStocks(currentStocks =>
-      currentStocks.map(product => {
-        const line = newPurchase.products.find(p => p.productId === product.id);
-        return line 
-          ? { ...product, quantity: (product.quantity || 0) + line.quantity }
-          : product;
-      })
-    );
-    
-    resetForm();
+
+    try {
+      await addPurchase(newPurchase);
+      await fetchStocks();
+      await fetchSuppliers();
+      resetForm();
+    } catch (error) {
+      console.error('Failed to add purchase:', error);
+    }
   };
 
   const canSubmit = supplier.trim() && lines.every(l => l.productId && l.quantity > 0);
@@ -226,7 +222,7 @@ const Achats = () => {
                         className="input-field w-full h-10 text-xs"
                       >
                         <option value="">Produit...</option>
-                        {products.map(p => (
+                        {stocksState.map(p => (
                           <option key={p.id} value={p.id}>{p.name}</option>
                         ))}
                       </select>
@@ -330,7 +326,7 @@ const Achats = () => {
                           {purchase.status === 'completed' ? 'Complété' : 'En attente'}
                         </span>
                       </div>
-                      <p className="text-[11px] text-muted-foreground truncate">{purchase.supplier}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{purchase.supplier_name}</p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-xs font-bold">{formatDA(purchase.total)}</p>
@@ -346,7 +342,7 @@ const Achats = () => {
                   <div className="mt-2 pt-2 border-t border-border/50">
                     {purchase.products.map((p, i) => (
                       <p key={i} className="text-[11px] text-muted-foreground">
-                        {p.productName} × {p.quantity} kg — {formatDA(p.total)}
+                        {p.product_name} × {p.quantity} kg — {formatDA(p.total)}
                       </p>
                     ))}
                   </div>

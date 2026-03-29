@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Package, Plus, X, Pencil, Trash2, Check, PackagePlus } from 'lucide-react';
-import { formatDA, Product } from '@/data/mock-data';
-import { useStocks } from '@/data/use-stocks';
+import { formatDA } from '@/data/mock-data';
+import { useStocks, Product } from '@/data/use-stocks';
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.04 } } };
 const item = { hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.2 } } };
@@ -12,7 +12,7 @@ const emptyForm = { name: '', nameAr: '', weight: '', minStock: 0 };
 
 
 const Stocks = () => {
-  const [stocksState, updateStocks] = useStocks();
+  const { stocksState, loading, addStock, updateStock, deleteStock } = useStocks();
   const [search, setSearch] = useState('');
 
   const [showForm, setShowForm] = useState(false);
@@ -25,35 +25,45 @@ const Stocks = () => {
     p.name.toLowerCase().includes(search.toLowerCase()) || p.nameAr.includes(search)
   );
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!form.name.trim()) return;
-    const newProduct: Product = {
-      id: String(Date.now()),
+    const newProduct: Omit<Product, 'id'> = {
       ...form,
       category: '',
       categoryAr: '',
       quantity: 0,
       price: 0,
       supplier: '',
+      minStock: 0,
     };
 
-    updateStocks(current => [newProduct, ...current]);
-    setForm(emptyForm);
-    setShowForm(false);
+    try {
+      await addStock(newProduct);
+      setForm(emptyForm);
+      setShowForm(false);
+    } catch (error) {
+      console.error('Add product failed:', error);
+    }
   };
 
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingId) return;
-    updateStocks(stocksState.map(p =>
-      p.id === editingId ? { ...p, ...form } : p
-    ));
-    setEditingId(null);
-    setForm(emptyForm);
+    try {
+      await updateStock(editingId, form);
+      setEditingId(null);
+      setForm(emptyForm);
+    } catch (error) {
+      console.error('Update product failed:', error);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    updateStocks(stocksState.filter(p => p.id !== id));
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteStock(id);
+    } catch (error) {
+      console.error('Delete product failed:', error);
+    }
   };
 
   const handleCancelEdit = () => {

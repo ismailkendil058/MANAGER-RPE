@@ -1,15 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ShoppingCart, ArrowLeft, Calendar, Users, Package } from 'lucide-react';
-import { formatDA, Sale } from '@/data/mock-data';
+import { formatDA } from '@/data/mock-data';
 import { useSales } from '@/data/use-sales';
 
 const VenteDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [sales] = useSales();
-  const [sale, setSale] = useState<Sale | null>(null);
+  const { salesState: sales } = useSales();
+  const [sale, setSale] = useState<any | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -69,7 +69,7 @@ const VenteDetail = () => {
           <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
             <div className="flex items-center justify-center gap-1 py-1.5 px-2.5 bg-background/60 rounded-lg">
               <Users className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="font-medium truncate max-w-[120px]">{sale.client}</span>
+              <span className="font-medium truncate max-w-[120px]">{sale.client_name}</span>
             </div>
             <div className="flex items-center justify-center gap-1 py-1.5 px-2.5 bg-background/60 rounded-lg">
               <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
@@ -89,9 +89,9 @@ const VenteDetail = () => {
           {sale.products.map((product, index) => (
             <div key={index} className="glass-card p-3 rounded-lg bg-surface/40 border-border/10">
               <div className="space-y-1">
-                <div className="font-medium text-xs leading-tight mb-1 min-h-[32px]">{product.productName}</div>
+                <div className="font-medium text-xs leading-tight mb-1 min-h-[32px]">{product.product_name}</div>
                 <div className="grid grid-cols-4 gap-2 text-[10px] text-muted-foreground items-center">
-                  <span className="font-mono col-span-2 text-left">{product.quantity}kg × {formatDA(product.unitPrice)}</span>
+                  <span className="font-mono col-span-2 text-left">{product.quantity}kg × {formatDA(product.unit_price)}</span>
                   <span className="font-bold text-accent text-right col-span-2">{formatDA(product.total)}</span>
                 </div>
               </div>
