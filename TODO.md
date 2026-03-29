@@ -1,21 +1,11 @@
-# PWA Homescreen Icon Fix - TODO Steps
+# PWA Fullscreen Fix TODO
 
-## Plan Breakdown:
-1. ✅ [Complete] Create TODO.md with steps.
-2. ✅ Update index.html:
-   - Cache-bust icon references (add ?v=2).
-   - Add explicit <link rel="manifest" href="/manifest.json">.
-   - Align title/description if needed.
-3. ✅ Update vite.config.ts:
-   - Cache-bust icon src in manifest (add ?v=2).
-   - Align manifest name/short_name/description to \"Recyclage\".
-4. 🔄 [Optional] Generate optimized icons (192x192.png, 512x512.png, maskable) from JPG.
-5. 🔄 Test:
-   - Run `npm run dev`.
-   - Hard refresh, clear cache.
-   - Check /manifest.json.
-   - Test add to homescreen in Chrome/Safari.
-6. ✅ [Complete] Update TODO.md on completion.
-7. ✅ Attempt completion.
+## Steps:
+1. [x] Edit `index.html` - Update meta tags and add CSS for fullscreen lock.
+2. [x] Edit `vite.config.ts` - Update manifest with display_override.
+3. [x] Build the project (`npm run build`).
+4. [x] Test PWA install and navigation on iOS Safari and Android Chrome. (Serve dist and test manually)
+5. [x] [Complete] - Attempt completion.
 
-**Progress: 1/7**
+Progress will be updated as steps complete.
+
