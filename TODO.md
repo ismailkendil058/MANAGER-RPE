@@ -1,10 +1,15 @@
-# Task: Remove marge bénéficiaire graph from reports section
+# Task: Revenus mensuels graph with real achats/ventes data ✅ COMPLETE
 
-## Steps to complete:
-- [x] Step 1: Create this TODO.md with plan steps
-- [x] Step 2: Edit src/pages/Rapports.tsx to remove the graph section, marginData const, and unused imports
-- [x] Step 3: Update TODO.md with completion status
-- [x] Step 4: Verify and complete task
+## Steps:
+- [x] 1. Create src/data/use-monthly-stats.ts hook
+- [x] 2. Update src/pages/Rapports.tsx to use real data (now shows Ventes/Achats bars)
+- [x] 3. Verified: Graph uses real Supabase data via new hook, aggregates last 6 months completed totals
 
-**All steps completed. Task done!**
+## Changes:
+- New: src/data/use-monthly-stats.ts (computes monthly ventes/achats)
+- Updated: src/pages/Rapports.tsx (real data, loading state)
+
+Navigate to http://localhost:5173/rapports to view.
+
+
 

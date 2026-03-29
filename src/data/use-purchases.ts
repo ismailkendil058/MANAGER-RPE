@@ -82,6 +82,28 @@ export const usePurchases = () => {
     const { error: itemsError } = await supabase.from('purchase_items').insert(itemRows);
     if (itemsError) throw itemsError;
 
+    // Update stock quantities for each product
+    for (const item of purchase.products) {
+      try {
+        const { data: currentProduct } = await supabase
+          .from('products')
+          .select('quantity')
+          .eq('id', item.product_id)
+          .single();
+
+        const currentQuantity = currentProduct?.quantity || 0;
+        const newQuantity = currentQuantity + item.quantity;
+
+        await supabase
+          .from('products')
+          .update({ quantity: newQuantity })
+          .eq('id', item.product_id);
+      } catch (stockError) {
+        console.error(`Failed to update stock for product ${item.product_id}:`, stockError);
+        // Continue even if stock update fails
+      }
+    }
+
     await fetchPurchases();
     return { ...purchase, id: purchaseId };
   };

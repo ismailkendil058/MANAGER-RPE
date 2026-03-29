@@ -83,9 +83,36 @@ export const useSales = () => {
     const { error: itemsError } = await supabase.from('sale_items').insert(itemRows);
     if (itemsError) throw itemsError;
 
+    // Update stock quantities for each product (deduct sold quantity)
+    for (const item of sale.products) {
+      try {
+        const { data: currentProduct } = await supabase
+          .from('products')
+          .select('quantity')
+          .eq('id', item.product_id)
+          .single();
+
+        const currentQuantity = currentProduct?.quantity || 0;
+        const newQuantity = currentQuantity - item.quantity;
+
+        if (newQuantity < 0) {
+          console.warn(`Insufficient stock for product ${item.product_id}: ${currentQuantity} - ${item.quantity} = ${newQuantity}`);
+        }
+
+        await supabase
+          .from('products')
+          .update({ quantity: newQuantity })
+          .eq('id', item.product_id);
+      } catch (stockError) {
+        console.error(`Failed to update stock for product ${item.product_id}:`, stockError);
+        // Continue even if stock update fails
+      }
+    }
+
     await fetchSales();
     return newSale;
   };
+
 
   return { salesState, loading, fetchSales, addSale };
 };

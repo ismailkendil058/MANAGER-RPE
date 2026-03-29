@@ -7,7 +7,7 @@ import { useStocks, Product } from '@/data/use-stocks';
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.04 } } };
 const item = { hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.2 } } };
 
-const emptyForm = { name: '', name_ar: '', weight: '', min_stock: 0 };
+const emptyForm = { name: '', name_ar: '', min_stock: 0 };
 
 
 
@@ -27,8 +27,9 @@ const Stocks = () => {
 
   const handleAdd = async () => {
     if (!form.name.trim()) return;
-    const newProduct: Omit<Product, 'id' | 'inserted_at' | 'updated_at'> = {
+      const newProduct: Omit<Product, 'id' | 'inserted_at' | 'updated_at'> = {
       ...form,
+      weight: '',
       category: '',
       category_ar: '',
       quantity: 0,
@@ -75,7 +76,7 @@ const Stocks = () => {
     <div className="space-y-2.5">
       <input type="text" placeholder="Nom du produit" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="input-field w-full h-10" />
       <input type="text" placeholder="الاسم بالعربية" dir="rtl" value={form.name_ar} onChange={e => setForm({ ...form, name_ar: e.target.value })} className="input-field w-full h-10" />
-      <input type="text" placeholder="Poids / Unité" value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} className="input-field w-full h-10" />
+
     </div>
   );
 
@@ -177,11 +178,7 @@ const Stocks = () => {
                         <span className="text-xs font-bold text-primary shrink-0">{product.quantity} kg</span>
                       </div>
                       <p className="text-[10px] text-muted-foreground/60 mt-0.5" dir="rtl">{product.name_ar}</p>
-                      <div className="flex items-center gap-3 mt-2 text-[11px] text-muted-foreground">
-                        <span>{product.weight}</span>
-                        <span>•</span>
-                        <span>{product.category}</span>
-                      </div>
+
                     </div>
                   </div>
 

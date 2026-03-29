@@ -64,7 +64,7 @@ const { clientsState: clientList, loading: clientsLoading, fetchClients, addClie
             </div>
             <div className="text-right">
               <p className="text-[10px] text-muted-foreground">Commandes</p>
-              <p className="text-sm font-bold">{selectedClient.total_orders}</p>
+              <p className="text-sm font-bold">{clientSales.length}</p>
             </div>
           </div>
         </div>
@@ -211,7 +211,7 @@ const { clientsState: clientList, loading: clientsLoading, fetchClients, addClie
               </div>
               <div className="text-right">
                 <p className="text-[10px] text-muted-foreground">Commandes</p>
-                <p className="text-xs font-bold">{client.total_orders}</p>
+                <p className="text-xs font-bold">{sharedSales.filter(s => s.client_name === client.name).length}</p>
               </div>
             </div>
           </motion.div>

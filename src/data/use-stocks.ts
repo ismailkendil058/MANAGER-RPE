@@ -7,7 +7,7 @@ export interface Product {
   name_ar: string;
   category?: string;
   category_ar?: string;
-  weight: string;
+  weight?: string;
   quantity?: number;
   price?: number;
   supplier?: string;
