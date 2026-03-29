@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => ({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "robots.txt", "icon.jpg"],
+      includeAssets: ["favicon.ico", "robots.txt", "Blue app icon design.jpg"],
       manifest: {
         name: "Manager",
         short_name: "Manager",
@@ -27,17 +27,17 @@ export default defineConfig(({ mode }) => ({
         start_url: "/",
         icons: [
           {
-            src: "/icon.jpg",
+            src: "/Blue app icon design.jpg",
             sizes: "192x192",
             type: "image/jpeg",
           },
           {
-            src: "/icon.jpg",
+            src: "/Blue app icon design.jpg",
             sizes: "512x512",
             type: "image/jpeg",
           },
           {
-            src: "/icon.jpg",
+            src: "/Blue app icon design.jpg",
             sizes: "512x512",
             type: "image/jpeg",
             purpose: "any maskable",
@@ -55,4 +55,4 @@ export default defineConfig(({ mode }) => ({
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
   },
-}));
+}));\n

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Package, Plus, X, Pencil, Trash2, Check, PackagePlus } from 'lucide-react';
-import { products as initialProducts, formatDA, Product } from '@/data/mock-data';
+import { formatDA, Product } from '@/data/mock-data';
+import { useStocks } from '@/data/use-stocks';
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.04 } } };
 const item = { hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.2 } } };
@@ -11,7 +12,7 @@ const emptyForm = { name: '', nameAr: '', weight: '', minStock: 0 };
 
 
 const Stocks = () => {
-  const [productList, setProductList] = useState<Product[]>(initialProducts);
+  const [stocksState, updateStocks] = useStocks();
   const [search, setSearch] = useState('');
 
   const [showForm, setShowForm] = useState(false);
@@ -20,7 +21,7 @@ const Stocks = () => {
 
 
 
-  const filtered = productList.filter(p =>
+  const filtered = stocksState.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) || p.nameAr.includes(search)
   );
 
@@ -36,7 +37,7 @@ const Stocks = () => {
       supplier: '',
     };
 
-    setProductList([newProduct, ...productList]);
+    updateStocks(current => [newProduct, ...current]);
     setForm(emptyForm);
     setShowForm(false);
   };
@@ -44,7 +45,7 @@ const Stocks = () => {
 
   const handleSaveEdit = () => {
     if (!editingId) return;
-    setProductList(productList.map(p =>
+    updateStocks(stocksState.map(p =>
       p.id === editingId ? { ...p, ...form } : p
     ));
     setEditingId(null);
@@ -52,7 +53,7 @@ const Stocks = () => {
   };
 
   const handleDelete = (id: string) => {
-    setProductList(productList.filter(p => p.id !== id));
+    updateStocks(stocksState.filter(p => p.id !== id));
   };
 
   const handleCancelEdit = () => {
@@ -75,7 +76,7 @@ const Stocks = () => {
       <motion.div variants={item} className="flex items-start justify-between">
         <div>
           <h1 className="text-lg font-bold">Stocks</h1>
-          <p className="text-xs text-muted-foreground">المخزون — {productList.length} produits</p>
+          <p className="text-xs text-muted-foreground">المخزون — {stocksState.length} produits</p>
         </div>
         <button
           onClick={() => { setShowForm(true); setEditingId(null); setForm(emptyForm); }}

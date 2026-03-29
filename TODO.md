@@ -1,12 +1,9 @@
-# Task: Auto-update stock quantities when achat (purchase) is added
+# TODO: Update Favicon and Icons to Blue App Icon Design
 
-## Plan Steps:
-- [ ] 1. Create `src/data/use-stocks.ts` hook for shared product/stock state management.
-- [ ] 2. Update `src/pages/Stocks.tsx` to use `useStocks` hook instead of local useState.
-- [ ] 3. Update `src/pages/Achats.tsx` handleSubmit to increment stock quantities for purchased products.
-- [ ] 4. Update `src/pages/Ventes.tsx` handleSubmit to decrement stock quantities for sold products (bonus for consistency).
-- [ ] 5. Test: Add achat → verify Stocks quantities increase; add vente → quantities decrease.
-- [ ] 6. attempt_completion
+## Steps:
+- [x] Step 1: Create TODO.md with plan breakdown
+- [x] Step 2: Edit index.html to replace icon references
+- [x] Step 3: Edit vite.config.ts to update PWA manifest and includeAssets
+- [x] Step 4: Verify changes and attempt completion
 
-**Current progress: Starting step 1**
-
+Current status: All steps completed ✓

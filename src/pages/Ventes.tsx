@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { products, formatDA, Sale, Client } from '@/data/mock-data';
 import { useClients } from '@/data/use-clients';
 import { useSales } from '@/data/use-sales';
+import { useStocks } from '@/data/use-stocks';
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.04 } } };
 const item = { hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.2 } } };
@@ -20,6 +21,7 @@ interface LineItem {
 const Ventes = () => {
   const navigate = useNavigate();
   const [sales, setSales] = useSales();
+  const [stocksState, updateStocks] = useStocks();
   const [clientsList, updateClients] = useClients();
   const [showForm, setShowForm] = useState(false);
 
@@ -100,6 +102,16 @@ const Ventes = () => {
         )
       );
     }
+    
+    // Auto-update stock: decrement quantities sold
+    updateStocks(currentStocks =>
+      currentStocks.map(product => {
+        const line = newSale.products.find(p => p.productId === product.id);
+        return line 
+          ? { ...product, quantity: Math.max(0, (product.quantity || 0) - line.quantity) }
+          : product;
+      })
+    );
     
     resetForm();
   };

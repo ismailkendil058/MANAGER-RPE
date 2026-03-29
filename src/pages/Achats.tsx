@@ -4,6 +4,7 @@ import { ShoppingBag, Plus, FileText, Calendar, X, Check, Trash2 } from 'lucide-
 import { useNavigate } from 'react-router-dom';
 import { products, suppliers, formatDA, PurchaseOrder } from '@/data/mock-data';
 import { usePurchases } from '@/data/use-purchases';
+import { useStocks } from '@/data/use-stocks';
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.04 } } };
 const item = { hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.2 } } };
@@ -19,6 +20,7 @@ interface LineItem {
 const Achats = () => {
   const navigate = useNavigate();
   const [purchases, setPurchases] = usePurchases();
+  const [stocksState, updateStocks] = useStocks();
   const [suppliersState, setSuppliersState] = useState(suppliers);
   const [showForm, setShowForm] = useState(false);
 
@@ -108,6 +110,17 @@ const Achats = () => {
       status: 'completed' as const,
     };
     setPurchases(p => [newPurchase, ...p]);
+    
+    // Auto-update stock quantities
+    updateStocks(currentStocks =>
+      currentStocks.map(product => {
+        const line = newPurchase.products.find(p => p.productId === product.id);
+        return line 
+          ? { ...product, quantity: (product.quantity || 0) + line.quantity }
+          : product;
+      })
+    );
+    
     resetForm();
   };
 
