@@ -20,13 +20,18 @@
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
   <style>
     html, body {
-      height: 100%;
-      overflow: hidden;
+      min-height: 100%;
+      width: 100%;
+      overflow: auto;
       margin: 0;
       padding: 0;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
     }
     #root {
-      height: 100vh;
+      min-height: 100%;
+      min-height: 100vh;
+      width: 100%;
       overflow: auto;
     }
   </style>
