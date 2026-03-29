@@ -1,11 +1,10 @@
-# PWA Fullscreen Fix TODO
+# Task: Remove marge bénéficiaire graph from reports section
 
-## Steps:
-1. [x] Edit `index.html` - Update meta tags and add CSS for fullscreen lock.
-2. [x] Edit `vite.config.ts` - Update manifest with display_override.
-3. [x] Build the project (`npm run build`).
-4. [x] Test PWA install and navigation on iOS Safari and Android Chrome. (Serve dist and test manually)
-5. [x] [Complete] - Attempt completion.
+## Steps to complete:
+- [x] Step 1: Create this TODO.md with plan steps
+- [x] Step 2: Edit src/pages/Rapports.tsx to remove the graph section, marginData const, and unused imports
+- [x] Step 3: Update TODO.md with completion status
+- [x] Step 4: Verify and complete task
 
-Progress will be updated as steps complete.
+**All steps completed. Task done!**
 
