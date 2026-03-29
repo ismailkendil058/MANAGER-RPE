@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, Plus, FileText, Calendar, X, Check, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { products, clients, formatDA, Sale } from '@/data/mock-data';
 import { useSales } from '@/data/use-sales';
 
@@ -16,6 +17,7 @@ interface LineItem {
 }
 
 const Ventes = () => {
+  const navigate = useNavigate();
   const [sales, setSales] = useSales();
   const [showForm, setShowForm] = useState(false);
 
@@ -261,7 +263,11 @@ const Ventes = () => {
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-xs font-bold">{formatDA(sale.total)}</p>
-                      <button className="text-muted-foreground mt-1">
+                      <button 
+                        onClick={() => navigate(`/vente/${sale.id}`)} 
+                        className="text-muted-foreground hover:text-accent mt-1 active:scale-95 transition-all"
+                        title="Voir détails"
+                      >
                         <FileText className="w-3.5 h-3.5" />
                       </button>
                     </div>

@@ -1,7 +1,13 @@
-# Flexible Pricing Fix - Progress Tracker
+# TODO: Redesign Achats + Details Pages
 
-## Plan Steps:
-- [x] Step 1: Edit src/pages/Achats.tsx - Remove auto-price fill ✅
-- [x] Step 2: Edit src/pages/Ventes.tsx - Add manual price input + remove auto-fill ✅
-- [x] Step 3: Test forms - verify user-controlled pricing ✅ (dev server running)
-- [x] Step 4: Complete task ✅
+## Previous Steps (Completed):
+- [x] Achats redesign matching Ventes style ✅
+- [x] Created VenteDetail.tsx and AchatDetail.tsx ✅
+- [x] Updated App.tsx routes and imports ✅
+- [x] Updated Ventes.tsx and Achats.tsx FileText buttons with navigation ✅
+
+## Final Steps:
+- [x] 1-6 Completed ✅
+
+**Task complete: Run `npm run dev` to test /ventes and /fournisseurs → click document icon navigates to styled details pages.**
+
