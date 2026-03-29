@@ -29,8 +29,8 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       {/* Top Header */}
       <header className="h-12 border-b border-border flex items-center justify-between px-4 bg-card shrink-0">
         <div>
-          <h1 className="text-sm font-bold text-primary">SteelFlow</h1>
-          <p className="text-[9px] text-muted-foreground -mt-0.5">صلب و حديد</p>
+          <h1 className="text-sm font-bold text-primary">Recyclage</h1>
+          <p className="text-[9px] text-muted-foreground -mt-0.5">إعادة تدوير</p>
         </div>
         <div className="text-[10px] text-muted-foreground">
           {new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}

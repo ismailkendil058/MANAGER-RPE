@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, Plus, FileText, Calendar, X, Check, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { products, clients, formatDA, Sale } from '@/data/mock-data';
+import { products, formatDA, Sale, Client } from '@/data/mock-data';
+import { useClients } from '@/data/use-clients';
 import { useSales } from '@/data/use-sales';
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.04 } } };
@@ -19,6 +20,7 @@ interface LineItem {
 const Ventes = () => {
   const navigate = useNavigate();
   const [sales, setSales] = useSales();
+  const [clientsList, updateClients] = useClients();
   const [showForm, setShowForm] = useState(false);
 
   // Form state
@@ -86,6 +88,19 @@ const Ventes = () => {
       status: 'completed',
     };
     setSales(s => [newSale, ...s]);
+    
+    // Update client totals
+    const targetClient = clientsList.find(c => c.name === client);
+    if (targetClient) {
+      updateClients(c => 
+        c.map(cl => 
+          cl.name === client 
+            ? { ...cl, totalSpent: cl.totalSpent + grandTotal, totalOrders: cl.totalOrders + 1 }
+            : cl
+        )
+      );
+    }
+    
     resetForm();
   };
 
@@ -137,7 +152,7 @@ const Ventes = () => {
                   className="input-field w-full h-10"
                 >
                   <option value="">Sélectionner un client...</option>
-                  {clients.map(c => (
+                  {clientsList.map(c => (
                     <option key={c.id} value={c.name}>{c.name}</option>
                   ))}
                 </select>

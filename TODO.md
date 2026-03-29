@@ -1,13 +1,12 @@
-# TODO: Redesign Achats + Details Pages
+# Task: Auto-update stock quantities when achat (purchase) is added
 
-## Previous Steps (Completed):
-- [x] Achats redesign matching Ventes style ✅
-- [x] Created VenteDetail.tsx and AchatDetail.tsx ✅
-- [x] Updated App.tsx routes and imports ✅
-- [x] Updated Ventes.tsx and Achats.tsx FileText buttons with navigation ✅
+## Plan Steps:
+- [ ] 1. Create `src/data/use-stocks.ts` hook for shared product/stock state management.
+- [ ] 2. Update `src/pages/Stocks.tsx` to use `useStocks` hook instead of local useState.
+- [ ] 3. Update `src/pages/Achats.tsx` handleSubmit to increment stock quantities for purchased products.
+- [ ] 4. Update `src/pages/Ventes.tsx` handleSubmit to decrement stock quantities for sold products (bonus for consistency).
+- [ ] 5. Test: Add achat → verify Stocks quantities increase; add vente → quantities decrease.
+- [ ] 6. attempt_completion
 
-## Final Steps:
-- [x] 1-6 Completed ✅
-
-**Task complete: Run `npm run dev` to test /ventes and /fournisseurs → click document icon navigates to styled details pages.**
+**Current progress: Starting step 1**
 

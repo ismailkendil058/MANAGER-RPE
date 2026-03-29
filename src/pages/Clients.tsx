@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, MapPin, Plus, X, ChevronRight, ShoppingCart, ArrowLeft, UserPlus } from 'lucide-react';
-import { clients as initialClients, formatDA, Client } from '@/data/mock-data';
+import { formatDA, Client } from '@/data/mock-data';
+import { useClients } from '@/data/use-clients';
 import { useSales } from '@/data/use-sales';
 import type { Sale } from '@/data/mock-data';
 
@@ -9,7 +10,7 @@ const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } 
 const item = { hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.2 } } };
 
 const Clients = () => {
-  const [clientList, setClientList] = useState<Client[]>(initialClients);
+const [clientList, updateClients] = useClients();
   const [showForm, setShowForm] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [form, setForm] = useState({ name: '', phone: '', address: '' });
@@ -24,7 +25,7 @@ const Clients = () => {
       totalSpent: 0,
       totalOrders: 0,
     };
-    setClientList([newClient, ...clientList]);
+    updateClients(c => [newClient, ...c]);
     setForm({ name: '', phone: '', address: '' });
     setShowForm(false);
   };
