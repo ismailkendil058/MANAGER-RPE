@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import AppLayout from "./components/AppLayout";
+import { usePWAFullscreen } from "./hooks/use-pwa-fullscreen";
 
 import Stocks from "./pages/Stocks";
 import Ventes from "./pages/Ventes";
@@ -16,26 +17,30 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<AppLayout><Stocks /></AppLayout>} />
-          <Route path="/stocks" element={<AppLayout><Stocks /></AppLayout>} />
-          <Route path="/ventes" element={<AppLayout><Ventes /></AppLayout>} />
-          <Route path="/clients" element={<AppLayout><Clients /></AppLayout>} />
-          <Route path="/fournisseurs" element={<AppLayout><Achats /></AppLayout>} />
-          <Route path="/vente/:id" element={<AppLayout><VenteDetail /></AppLayout>} />
-          <Route path="/achat/:id" element={<AppLayout><AchatDetail /></AppLayout>} />
-          <Route path="/rapports" element={<AppLayout><Rapports /></AppLayout>} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  usePWAFullscreen();
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<AppLayout><Stocks /></AppLayout>} />
+            <Route path="/stocks" element={<AppLayout><Stocks /></AppLayout>} />
+            <Route path="/ventes" element={<AppLayout><Ventes /></AppLayout>} />
+            <Route path="/clients" element={<AppLayout><Clients /></AppLayout>} />
+            <Route path="/fournisseurs" element={<AppLayout><Achats /></AppLayout>} />
+            <Route path="/vente/:id" element={<AppLayout><VenteDetail /></AppLayout>} />
+            <Route path="/achat/:id" element={<AppLayout><AchatDetail /></AppLayout>} />
+            <Route path="/rapports" element={<AppLayout><Rapports /></AppLayout>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

@@ -31,11 +31,13 @@ export default defineConfig(({ mode }) => ({
             src: "/Blue app icon design.jpg?v=2",
             sizes: "192x192",
             type: "image/jpeg",
+            purpose: "maskable",
           },
           {
             src: "/Blue app icon design.jpg?v=2",
             sizes: "512x512",
             type: "image/jpeg",
+            purpose: "maskable any",
           },
           {
             src: "/Blue app icon design.jpg?v=2",
