@@ -18,26 +18,26 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "robots.txt", "Blue app icon design.jpg"],
       manifest: {
-        name: "Manager",
-        short_name: "Manager",
-        description: "Manager productivity application",
+        name: "Recyclage",
+        short_name: "Recyclage",
+        description: "Recyclage project",
         theme_color: "#ffffff",
         background_color: "#ffffff",
         display: "standalone",
         start_url: "/",
         icons: [
           {
-            src: "/Blue app icon design.jpg",
+            src: "/Blue app icon design.jpg?v=2",
             sizes: "192x192",
             type: "image/jpeg",
           },
           {
-            src: "/Blue app icon design.jpg",
+            src: "/Blue app icon design.jpg?v=2",
             sizes: "512x512",
             type: "image/jpeg",
           },
           {
-            src: "/Blue app icon design.jpg",
+            src: "/Blue app icon design.jpg?v=2",
             sizes: "512x512",
             type: "image/jpeg",
             purpose: "any maskable",
@@ -55,4 +55,4 @@ export default defineConfig(({ mode }) => ({
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
   },
-}));\n
+}));
