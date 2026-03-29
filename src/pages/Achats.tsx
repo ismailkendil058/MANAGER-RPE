@@ -10,10 +10,9 @@ import { Label } from '@/components/ui/label';
 import { formatDA } from '@/data/mock-data';
 import { purchases, suppliers, products, Supplier, Product } from '@/data/mock-data';
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { PurchaseOrder } from '@/data/mock-data';
-import { z } from 'zod';
+import type { PurchaseOrder, Supplier } from '@/data/mock-data';
+import { z } from 'zod'; 
 import { useForm } from 'react-hook-form';
-import type { PurchaseOrder } from '@/data/mock-data';
 
 import { Badge } from '@/components/ui/badge';
 import {
@@ -42,8 +41,11 @@ type FormValues = z.infer<typeof formSchema>;
 
 const Achats = () => {
   const [localPurchases, setLocalPurchases] = useState<PurchaseOrder[]>(purchases);
+  const [localSuppliers, setLocalSuppliers] = useState<Supplier[]>(suppliers);
 
   const [selectedPurchase, setSelectedPurchase] = useState<PurchaseOrder | null>(null);
+  const [showAddSupplier, setShowAddSupplier] = useState(false);
+  const [newSupplierForm, setNewSupplierForm] = useState({ name: '', phone: '' });
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -54,11 +56,11 @@ const Achats = () => {
     },
   });
 
-  const supplierName = (id: string) => suppliers.find(s => s.id === id)?.name || '';
+const supplierName = (id: string) => localSuppliers.find(s => s.id === id)?.name || '';
   const productName = (id: string) => products.find(p => p.id === id)?.name || '';
 
   const onSubmit = (values: FormValues) => {
-    const supplier = suppliers.find(s => s.id === values.supplierId)!;
+    const supplier = localSuppliers.find(s => s.id === values.supplierId)!;
     const total = values.lines.reduce((sum, line) => sum + (line.quantity * line.price), 0);
     const newPurchase: PurchaseOrder = {
       id: `A-${Date.now().toString().slice(-4)}`,
@@ -90,14 +92,7 @@ const Achats = () => {
     }
   };
 
-  const updatePrice = (productId: string, index: number) => {
-    const product = products.find(p => p.id === productId);
-    if (product?.price) {
-      const current = form.getValues('lines');
-      current[index].price = product.price;
-      form.setValue('lines', current);
-    }
-  };
+
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-4">
@@ -131,22 +126,89 @@ const Achats = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Fournisseur</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Sélectionner..." />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {suppliers.map((s) => (
+                          {localSuppliers.map((s) => (
                             <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAddSupplier(true)}
+                        className="mt-1.5 w-full text-xs h-8"
+                      >
+                        + Ajouter un nouveau fournisseur
+                      </Button>
                       <FormMessage />
-                    </FormItem>
+</FormItem>
                   )}
                 />
+
+                <Dialog open={showAddSupplier} onOpenChange={setShowAddSupplier}>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Ajouter un nouveau fournisseur</DialogTitle>
+                      <DialogDescription>
+                        Remplissez nom et téléphone du fournisseur.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3">
+                      <Input
+                        placeholder="Nom du fournisseur"
+                        value={newSupplierForm.name}
+                        onChange={(e) => setNewSupplierForm({ ...newSupplierForm, name: e.target.value })}
+                      />
+                      <Input
+                        type="tel"
+                        placeholder="Téléphone"
+                        value={newSupplierForm.phone}
+                        onChange={(e) => setNewSupplierForm({ ...newSupplierForm, phone: e.target.value })}
+                      />
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setShowAddSupplier(false)}
+                          className="flex-1"
+                        >
+                          Annuler
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            if (newSupplierForm.name.trim()) {
+                              const newId = `F-${Date.now().toString().slice(-4)}`;
+                              const newSupplier: Supplier = {
+                                id: newId,
+                                name: newSupplierForm.name,
+                                phone: newSupplierForm.phone,
+                                address: '',
+                                totalOrders: 0,
+                                totalSpent: 0,
+                              };
+                              setLocalSuppliers([newSupplier, ...localSuppliers]);
+                              form.setValue('supplierId', newId);
+                              setNewSupplierForm({ name: '', phone: '' });
+                              setShowAddSupplier(false);
+                            }
+                          }}
+                          disabled={!newSupplierForm.name.trim()}
+                          className="flex-1"
+                        >
+                          Ajouter
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
 
                 <FormField
                   control={form.control}
@@ -167,9 +229,8 @@ const Achats = () => {
                   {form.watch('lines')?.map((line, index) => (
                     <div key={index} className="flex gap-2 items-end p-3 border rounded-md mt-2 bg-muted/50">
                       <div className="flex-1">
-                        <Select onValueChange={(val) => {
+                          <Select onValueChange={(val) => {
                           form.setValue(`lines.${index}.productId`, val);
-                          updatePrice(val, index);
                         }}>
                           <SelectTrigger className="h-10">
                             <SelectValue />

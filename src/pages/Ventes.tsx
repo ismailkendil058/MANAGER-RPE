@@ -42,13 +42,12 @@ const Ventes = () => {
         const product = products.find(p => p.id === String(value));
         if (product) {
           line.productName = product.name;
-          line.unitPrice = product.price;
-          line.total = product.price * line.quantity;
         }
       }
-      if (field === 'quantity') {
-        line.quantity = Number(value);
-        line.total = line.unitPrice * Number(value);
+      if (field === 'quantity' || field === 'unitPrice') {
+        line.quantity = field === 'quantity' ? Number(value) : line.quantity;
+        line.unitPrice = field === 'unitPrice' ? Number(value) : line.unitPrice;
+        line.total = line.unitPrice * line.quantity;
       }
       updated[index] = line;
       return updated;
@@ -145,7 +144,7 @@ const Ventes = () => {
               {/* Line Items */}
               <div className="space-y-3">
                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium block">Produits</label>
-                {lines.map((line, i) => (
+                      {lines.map((line, i) => (
                   <div key={i} className="flex gap-2 items-start">
                     <div className="flex-1 space-y-2">
                       <select
@@ -159,8 +158,8 @@ const Ventes = () => {
                         ))}
                       </select>
                       {line.productId && (
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                          <div className="md:col-span-1">
                             <label className="text-[10px] text-muted-foreground mb-1 block">Quantité (kg)</label>
                             <input
                               type="number"
@@ -170,7 +169,19 @@ const Ventes = () => {
                               className="input-field w-full h-9 text-sm"
                             />
                           </div>
-                          <div className="flex-1">
+                          <div className="md:col-span-1">
+                            <label className="text-[10px] text-muted-foreground mb-1 block">Prix unitaire</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1000"
+                              value={line.unitPrice || ''}
+                              onChange={e => updateLine(i, 'unitPrice', e.target.value)}
+                              className="input-field w-full h-9 text-sm"
+                              placeholder="DA"
+                            />
+                          </div>
+                          <div className="md:col-span-1">
                             <label className="text-[10px] text-muted-foreground mb-1 block">Sous-total</label>
                             <div className="input-field h-9 flex items-center text-xs font-semibold text-accent bg-accent/5">
                               {formatDA(line.total)}

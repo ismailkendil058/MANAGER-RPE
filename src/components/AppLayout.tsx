@@ -44,7 +44,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.15 }}
-          className="p-4 pb-24"
+          className="p-4 pb-28"
         >
           {children}
         </motion.div>
@@ -52,7 +52,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border safe-area-bottom z-50">
-        <div className="flex items-center justify-around h-14">
+        <div className="flex items-center justify-around h-16">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
@@ -62,10 +62,10 @@ const AppLayout = ({ children }: AppLayoutProps) => {
                 className="flex flex-col items-center justify-center gap-0.5 w-full h-full"
               >
                 <item.icon
-                  className={`w-5 h-5 transition-colors ${isActive ? 'text-accent' : 'text-muted-foreground'}`}
-                  strokeWidth={isActive ? 2 : 1.5}
+                  className={`w-6 h-6 transition-colors ${isActive ? 'text-accent' : 'text-muted-foreground'}`}
+                  strokeWidth={isActive ? 2.5 : 2}
                 />
-                <span className={`text-[9px] font-medium transition-colors ${isActive ? 'text-accent' : 'text-muted-foreground'}`}>
+                <span className={`text-xs font-medium transition-colors ${isActive ? 'text-accent' : 'text-muted-foreground'}`}>
                   {item.label}
                 </span>
               </NavLink>
