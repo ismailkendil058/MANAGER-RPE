@@ -7,7 +7,7 @@ import { useStocks, Product } from '@/data/use-stocks';
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.04 } } };
 const item = { hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.2 } } };
 
-const emptyForm = { name: '', nameAr: '', weight: '', minStock: 0 };
+const emptyForm = { name: '', name_ar: '', weight: '', min_stock: 0 };
 
 
 
@@ -22,19 +22,19 @@ const Stocks = () => {
 
 
   const filtered = stocksState.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase()) || p.nameAr.includes(search)
+    p.name.toLowerCase().includes(search.toLowerCase()) || p.name_ar.includes(search)
   );
 
   const handleAdd = async () => {
     if (!form.name.trim()) return;
-    const newProduct: Omit<Product, 'id'> = {
+    const newProduct: Omit<Product, 'id' | 'inserted_at' | 'updated_at'> = {
       ...form,
       category: '',
-      categoryAr: '',
+      category_ar: '',
       quantity: 0,
       price: 0,
       supplier: '',
-      minStock: 0,
+      min_stock: 0,
     };
 
     try {
@@ -74,7 +74,7 @@ const Stocks = () => {
   const formFields = (
     <div className="space-y-2.5">
       <input type="text" placeholder="Nom du produit" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="input-field w-full h-10" />
-      <input type="text" placeholder="الاسم بالعربية" dir="rtl" value={form.nameAr} onChange={e => setForm({ ...form, nameAr: e.target.value })} className="input-field w-full h-10" />
+      <input type="text" placeholder="الاسم بالعربية" dir="rtl" value={form.name_ar} onChange={e => setForm({ ...form, name_ar: e.target.value })} className="input-field w-full h-10" />
       <input type="text" placeholder="Poids / Unité" value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} className="input-field w-full h-10" />
     </div>
   );
@@ -176,7 +176,7 @@ const Stocks = () => {
                         <h3 className="text-sm font-semibold truncate">{product.name}</h3>
                         <span className="text-xs font-bold text-primary shrink-0">{product.quantity} kg</span>
                       </div>
-                      <p className="text-[10px] text-muted-foreground/60 mt-0.5" dir="rtl">{product.nameAr}</p>
+                      <p className="text-[10px] text-muted-foreground/60 mt-0.5" dir="rtl">{product.name_ar}</p>
                       <div className="flex items-center gap-3 mt-2 text-[11px] text-muted-foreground">
                         <span>{product.weight}</span>
                         <span>•</span>

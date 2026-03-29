@@ -6,8 +6,10 @@ export interface Supplier {
   name: string;
   phone: string;
   address: string;
-  totalOrders: number;
-  totalSpent: number;
+  total_orders: number;
+  total_spent: number;
+  inserted_at?: string;
+  updated_at?: string;
 }
 
 export const useSuppliers = () => {
@@ -30,9 +32,9 @@ export const useSuppliers = () => {
     fetchSuppliers();
   }, []);
 
-  const addSupplier = async (supplier: Omit<Supplier, 'id' | 'totalOrders' | 'totalSpent'>) => {
+  const addSupplier = async (supplier: Omit<Supplier, 'id' | 'total_orders' | 'total_spent' | 'inserted_at' | 'updated_at'>) => {
     const id = String(Date.now());
-    const { error } = await supabase.from('suppliers').insert([{ ...supplier, id, totalOrders: 0, totalSpent: 0 }]);
+    const { error } = await supabase.from('suppliers').insert([{ ...supplier, id, total_orders: 0, total_spent: 0 }]);
     if (error) throw error;
     await fetchSuppliers();
   };

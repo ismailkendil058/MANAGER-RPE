@@ -4,15 +4,17 @@ import { supabase } from '@/lib/supabase';
 export interface Product {
   id: string;
   name: string;
-  nameAr: string;
+  name_ar: string;
   category?: string;
-  categoryAr?: string;
+  category_ar?: string;
   weight: string;
   quantity?: number;
   price?: number;
   supplier?: string;
   supplier_id?: string;
-  minStock: number;
+  min_stock: number;
+  inserted_at?: string;
+  updated_at?: string;
 }
 
 export const useStocks = () => {
@@ -40,7 +42,7 @@ export const useStocks = () => {
     fetchStocks();
   }, []);
 
-  const addStock = async (product: Omit<Product, 'id'>) => {
+  const addStock = async (product: Omit<Product, 'id' | 'inserted_at' | 'updated_at'>) => {
     const newId = String(Date.now());
     const { error } = await supabase.from('products').insert([{ ...product, id: newId }]);
     if (error) throw error;

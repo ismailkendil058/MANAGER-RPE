@@ -6,8 +6,10 @@ export interface Client {
   name: string;
   phone: string;
   address: string;
-  totalSpent: number;
-  totalOrders: number;
+  total_spent: number;
+  total_orders: number;
+  inserted_at?: string;
+  updated_at?: string;
 }
 
 export const useClients = () => {
@@ -30,9 +32,9 @@ export const useClients = () => {
     fetchClients();
   }, []);
 
-  const addClient = async (client: Omit<Client, 'id' | 'totalSpent' | 'totalOrders'>) => {
+  const addClient = async (client: Omit<Client, 'id' | 'total_spent' | 'total_orders' | 'inserted_at' | 'updated_at'>) => {
     const id = String(Date.now());
-    const { error } = await supabase.from('clients').insert([{ ...client, id, totalSpent: 0, totalOrders: 0 }]);
+    const { error } = await supabase.from('clients').insert([{ ...client, id, total_spent: 0, total_orders: 0 }]);
     if (error) throw error;
     await fetchClients();
   };

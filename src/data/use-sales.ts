@@ -65,7 +65,7 @@ export const useSales = () => {
   }, []);
 
   const addSale = async (sale: Omit<Sale, 'id'>) => {
-    const saleId = sale.id || `V-${String(Date.now())}`;
+    const saleId = `V-${String(Date.now())}`;
     const newSale = { ...sale, id: saleId };
 
     const { error: saleError } = await supabase.from('sales').insert([{ id: saleId, date: sale.date, client_id: sale.client_id, client_name: sale.client_name, total: sale.total, status: sale.status }]);

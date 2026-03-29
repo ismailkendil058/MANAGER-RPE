@@ -65,7 +65,7 @@ export const usePurchases = () => {
   }, []);
 
   const addPurchase = async (purchase: Omit<PurchaseOrder, 'id'>) => {
-    const purchaseId = purchase.id || `A-${String(Date.now())}`;
+    const purchaseId = `A-${String(Date.now())}`;
 
     const { error: purchaseError } = await supabase.from('purchases').insert([{ id: purchaseId, date: purchase.date, supplier_id: purchase.supplier_id, supplier_name: purchase.supplier_name, total: purchase.total, status: purchase.status }]);
     if (purchaseError) throw purchaseError;

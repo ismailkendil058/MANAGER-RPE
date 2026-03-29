@@ -97,8 +97,8 @@ const Ventes = () => {
       await addSale(newSale);
       if (clientRecord) {
         await updateClient(clientRecord.id, {
-          totalSpent: clientRecord.totalSpent + grandTotal,
-          totalOrders: clientRecord.totalOrders + 1,
+          total_spent: clientRecord.total_spent + grandTotal,
+          total_orders: clientRecord.total_orders + 1,
         });
       }
       await fetchStocks();

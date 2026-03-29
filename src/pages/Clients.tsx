@@ -60,11 +60,11 @@ const { clientsState: clientList, loading: clientsLoading, fetchClients, addClie
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/50">
             <div>
               <p className="text-[10px] text-muted-foreground">Total dépensé</p>
-              <p className="text-sm font-bold text-accent">{formatDA(selectedClient.totalSpent)}</p>
+              <p className="text-sm font-bold text-accent">{formatDA(selectedClient.total_spent)}</p>
             </div>
             <div className="text-right">
               <p className="text-[10px] text-muted-foreground">Commandes</p>
-              <p className="text-sm font-bold">{selectedClient.totalOrders}</p>
+              <p className="text-sm font-bold">{selectedClient.total_orders}</p>
             </div>
           </div>
         </div>
@@ -207,11 +207,11 @@ const { clientsState: clientList, loading: clientsLoading, fetchClients, addClie
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/50">
               <div>
                 <p className="text-[10px] text-muted-foreground">Dépensé</p>
-                <p className="text-xs font-bold">{formatDA(client.totalSpent)}</p>
+                <p className="text-xs font-bold">{formatDA(client.total_spent)}</p>
               </div>
               <div className="text-right">
                 <p className="text-[10px] text-muted-foreground">Commandes</p>
-                <p className="text-xs font-bold">{client.totalOrders}</p>
+                <p className="text-xs font-bold">{client.total_orders}</p>
               </div>
             </div>
           </motion.div>
