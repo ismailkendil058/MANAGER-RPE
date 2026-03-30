@@ -53,24 +53,26 @@
     --surface: 210 20% 98%;
     --surface-hover: 210 20% 95%;
   }
-}
 
-@layer base {
-  * {
+  *,
+  *::before,
+  *::after {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
 
   html {
-    -webkit-tap-highlight-color: transparent;
     -webkit-text-size-adjust: 100%;
     -ms-text-size-adjust: 100%;
     text-size-adjust: 100%;
     -webkit-touch-callout: none;
-    touch-action: pan-y;
+    touch-action: pan-y pinch-zoom;
     overscroll-behavior: none;
     min-height: 100%;
     height: 100%;
     overflow: auto;
+    position: relative;
   }
 
   body {
@@ -79,9 +81,13 @@
     height: 100%;
     width: 100%;
     overflow: auto;
-    touch-action: pan-y;
+    touch-action: pan-y pinch-zoom;
     overscroll-behavior: contain;
-    position: static;
+    position: fixed;
+    left: 0;
+    top: 0;
+    margin: 0;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
 
   #root {
@@ -101,25 +107,25 @@
     user-select: text;
     touch-action: manipulation;
     pointer-events: auto;
+    resize: none;
   }
 
-  .input-field {
-    @apply bg-surface border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all duration-150;
-    min-height: 2.5rem;
-    font-size: 16px;
+  textarea {
+    resize: vertical;
   }
 
-  input, textarea, select {
-    font-size: 16px !important;
-    -webkit-user-select: text;
-    user-select: text;
-    -webkit-appearance: none;
-    appearance: none;
+  button, 
+  [role="button"], 
+  .btn, 
+  button[data-state] {
+    touch-action: manipulation;
+    transform: translateZ(0);
+    -webkit-tap-highlight-color: transparent;
   }
 
   input, textarea {
     border-radius: 8px;
-    padding: 8px;
+    padding: 12px;
   }
 
   h1,
@@ -129,6 +135,18 @@
   h5,
   h6 {
     @apply font-semibold tracking-tight;
+  }
+
+  /* Keyboard push layout */
+  body.keyboard-open {
+    padding-bottom: 0;
+  }
+
+  /* iOS Safari specific */
+  @supports (-webkit-touch-callout: none) {
+    body {
+      padding-bottom: max(env(safe-area-inset-bottom), 20px);
+    }
   }
 }
 
@@ -171,6 +189,9 @@
 
   .input-field {
     @apply bg-surface border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all duration-150;
+    min-height: 2.5rem;
+    font-size: 16px;
+    touch-action: manipulation;
   }
 
   .scrollbar-hide {
@@ -188,5 +209,12 @@
 
   .safe-area-top {
     padding-top: env(safe-area-inset-top);
+  }
+
+  /* Fast tap button styles */
+  .fast-tap {
+    touch-action: manipulation;
+    transform: translateZ(0);
+    will-change: transform;
   }
 }

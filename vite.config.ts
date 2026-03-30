@@ -19,60 +19,10 @@ export default defineConfig(({ mode }) => ({
       srcDir: 'dist',
       filename: 'sw.js',
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "robots.txt", "Blue app icon design.jpg"],
+      includeAssets: ["favicon.ico", "robots.txt", "Blue app icon design.jpg", "manifest.webmanifest"],
       manifest: {
-        name: "Recyclage",
-        short_name: "Recyclage",
-        description: "Recyclage project",
-        theme_color: "#ffffff",
-        background_color: "#ffffff",
-        display: "standalone",
-        scope: "/",
-        start_url: "/",
+        ...require('./public/manifest.webmanifest'),
         display_override: ["standalone", "fullscreen", "minimal-ui", "browser"],
-        icons: [
-          {
-            src: "/favicon.ico",
-            sizes: "64x64",
-            type: "image/x-icon",
-            purpose: "any"
-          },
-          {
-            src: "/Blue app icon design.jpg?v=2",
-            sizes: "192x192",
-            type: "image/jpeg",
-            purpose: "any maskable"
-          },
-          {
-            src: "/Blue app icon design.jpg?v=2",
-            sizes: "512x512",
-            type: "image/jpeg",
-            purpose: "any maskable"
-          }
-        ],
-        shortcuts: [
-          {
-            name: "Stocks",
-            short_name: "Stocks",
-            description: "Voir les stocks",
-            url: "/stocks",
-            icons: [{ src: "/favicon.ico", sizes: "64x64", type: "image/x-icon" }]
-          },
-          {
-            name: "Ventes",
-            short_name: "Ventes",
-            description: "Voir les ventes",
-            url: "/ventes",
-            icons: [{ src: "/favicon.ico", sizes: "64x64", type: "image/x-icon" }]
-          },
-          {
-            name: "Clients",
-            short_name: "Clients",
-            description: "Voir les clients",
-            url: "/clients",
-            icons: [{ src: "/favicon.ico", sizes: "64x64", type: "image/x-icon" }]
-          }
-        ]
       },
       devOptions: {
         enabled: true
@@ -98,7 +48,7 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
-        manualChunks(id) {
+        manualChunks(id: string) {
           if (id.includes('node_modules/react') || id.includes('react-dom')) return 'vendor-react';
           if (id.includes('@tanstack')) return 'vendor-query';
           if (id.includes('lucide-react') || id.includes('framer-motion')) return 'vendor-ui';
@@ -106,14 +56,18 @@ export default defineConfig(({ mode }) => ({
         }
       },
       sourcemap: false,
-      minify: 'terser',
-      terserOptions: {
-        compress: {
-          drop_console: true,
-          drop_debugger: true,
-        },
+    },
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        pure_funcs: ['console.log'],
+        passes: 2,
       },
     },
+    target: 'esnext',
+    cssCodeSplit: true,
   },
   resolve: {
     alias: {
