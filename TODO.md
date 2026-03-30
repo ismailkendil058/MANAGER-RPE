@@ -11,7 +11,12 @@
 8. [x] Test: npm run build recommended; Lighthouse should now show 90+ perf on mobile.
 9. [ ] Final cleanup if needed.
 
-Current progress: All optimizations complete! App now has smooth buttons (fast-tap, no 300ms delay), lag-free keyboard (visualViewport + CSS), PWA perf boosts.
+## FORM UX FIXES (New Feedback)
+10. [x] Fix Achats/Ventes forms: keyboard not opening (auto-focus + scrollIntoView), double-submit (isSubmitting guard, async try/finally). 
+
+Current progress: Complete ✅. Test with `npm run dev`.
+
+Current progress: Mobile perf ✅. Fixing form bugs: auto-focus first input, isSubmitting guard, form onSubmit.
 
 
 

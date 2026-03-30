@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, Plus, FileText, Calendar, X, Check, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -24,12 +24,24 @@ const Ventes = () => {
   const { stocksState, loading: stocksLoading, fetchStocks } = useStocks();
   const { clientsState: clientsList, loading: clientsLoading, fetchClients, updateClient } = useClients();
   const [showForm, setShowForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Refs
+  const firstFieldRef = useRef<HTMLSelectElement>(null);
 
   // Form state
   const [client, setClient] = useState('');
   const [lines, setLines] = useState<LineItem[]>([
     { productId: '', productName: '', quantity: 1, unitPrice: 0, total: 0 },
   ]);
+
+  // Auto-focus first field
+  useEffect(() => {
+    if (showForm && firstFieldRef.current) {
+      firstFieldRef.current.focus();
+      firstFieldRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [showForm]);
 
   const totalSales = sales.reduce((sum, s) => sum + s.total, 0);
 
@@ -72,28 +84,31 @@ const Ventes = () => {
     setShowForm(false);
   };
 
-  const handleSubmit = async () => {
-    if (!client.trim() || lines.some(l => !l.productId)) return;
-    const today = new Date().toISOString().split('T')[0];
-
-    const clientRecord = clientsList.find(c => c.name === client);
-
-    const newSale = {
-      date: today,
-      client_id: clientRecord ? clientRecord.id : null,
-      client_name: client,
-      products: lines.map(l => ({
-        product_id: l.productId,
-        product_name: l.productName,
-        quantity: l.quantity,
-        unit_price: l.unitPrice,
-        total: l.total,
-      })),
-      total: grandTotal,
-      status: 'completed' as const,
-    };
-
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (isSubmitting || !client.trim() || lines.some(l => !l.productId)) return;
+    
+    setIsSubmitting(true);
     try {
+      const today = new Date().toISOString().split('T')[0];
+
+      const clientRecord = clientsList.find(c => c.name === client);
+
+      const newSale = {
+        date: today,
+        client_id: clientRecord ? clientRecord.id : null,
+        client_name: client,
+        products: lines.map(l => ({
+          product_id: l.productId,
+          product_name: l.productName,
+          quantity: l.quantity,
+          unit_price: l.unitPrice,
+          total: l.total,
+        })),
+        total: grandTotal,
+        status: 'completed' as const,
+      };
+
       await addSale(newSale);
       if (clientRecord) {
         await updateClient(clientRecord.id, {
@@ -106,10 +121,12 @@ const Ventes = () => {
       resetForm();
     } catch (error) {
       console.error('Failed to add sale:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const canSubmit = client.trim() && lines.every(l => l.productId && l.quantity > 0);
+  const canSubmit = client.trim() && lines.every(l => l.productId && l.quantity > 0) && !isSubmitting;
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-4">

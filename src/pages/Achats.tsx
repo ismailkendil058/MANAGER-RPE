@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, Plus, FileText, Calendar, X, Check, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +24,10 @@ const Achats = () => {
   const { stocksState, loading: stocksLoading, fetchStocks } = useStocks();
   const { suppliersState, loading: suppliersLoading, fetchSuppliers, addSupplier } = useSuppliers();
   const [showForm, setShowForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Refs
+  const firstFieldRef = useRef<HTMLSelectElement>(null);
 
   // Form state
   const [supplier, setSupplier] = useState('');
@@ -32,6 +36,14 @@ const Achats = () => {
   ]);
   const [showAddSupplier, setShowAddSupplier] = useState(false);
   const [newSupplierName, setNewSupplierName] = useState('');
+
+  // Auto-focus first field
+  useEffect(() => {
+    if (showForm && firstFieldRef.current) {
+      firstFieldRef.current.focus();
+      firstFieldRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [showForm]);
 
   const totalPurchases = purchases.reduce((sum, p) => sum + p.total, 0);
 
@@ -90,37 +102,42 @@ const Achats = () => {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!supplier.trim() || lines.some(l => !l.productId)) return;
-    const today = new Date().toISOString().split('T')[0];
-    const supplierRecord = suppliersState.find(s => s.id === supplier);
-
-    const newPurchase = {
-      date: today,
-      supplier_id: supplier,
-      supplier_name: supplierRecord?.name || supplier,
-      products: lines.map(l => ({
-        product_id: l.productId,
-        product_name: l.productName,
-        quantity: l.quantity,
-        unit_price: l.unitPrice,
-        total: l.total,
-      })),
-      total: grandTotal,
-      status: 'completed' as const,
-    };
-
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (isSubmitting || !supplier.trim() || lines.some(l => !l.productId)) return;
+    
+    setIsSubmitting(true);
     try {
+      const today = new Date().toISOString().split('T')[0];
+      const supplierRecord = suppliersState.find(s => s.id === supplier);
+
+      const newPurchase = {
+        date: today,
+        supplier_id: supplier,
+        supplier_name: supplierRecord?.name || supplier,
+        products: lines.map(l => ({
+          product_id: l.productId,
+          product_name: l.productName,
+          quantity: l.quantity,
+          unit_price: l.unitPrice,
+          total: l.total,
+        })),
+        total: grandTotal,
+        status: 'completed' as const,
+      };
+
       await addPurchase(newPurchase);
       await fetchStocks();
       await fetchSuppliers();
       resetForm();
     } catch (error) {
       console.error('Failed to add purchase:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const canSubmit = supplier.trim() && lines.every(l => l.productId && l.quantity > 0);
+  const canSubmit = supplier.trim() && lines.every(l => l.productId && l.quantity > 0) && !isSubmitting;
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-4">
@@ -147,14 +164,14 @@ const Achats = () => {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="glass-card p-4 space-y-4">
+            <form onSubmit={handleSubmit} className="glass-card p-4 space-y-4">
               {/* Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <ShoppingBag className="w-4 h-4 text-accent" />
                   <h3 className="text-xs font-semibold">Nouveau bon d'achat</h3>
                 </div>
-                <button onClick={resetForm} className="text-muted-foreground active:scale-90 transition-transform">
+                <button type="button" onClick={resetForm} className="text-muted-foreground active:scale-90 transition-transform" aria-label="Fermer">
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -288,14 +305,14 @@ const Achats = () => {
 
               {/* Submit */}
               <button
-                onClick={handleSubmit}
-                disabled={!canSubmit}
+                type="submit"
+                disabled={!canSubmit || isSubmitting}
                 className="w-full bg-accent text-accent-foreground py-2.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform disabled:opacity-40"
               >
                 <Check className="w-4 h-4" />
-                Enregistrer le bon d'achat
+                {isSubmitting ? 'Enregistrement...' : 'Enregistrer le bon d\'achat'}
               </button>
-            </div>
+            </form>
           </motion.div>
         )}
       </AnimatePresence>
