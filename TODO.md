@@ -1,10 +1,10 @@
-# Rapports Products Graph Task
+# Fix React Lazy Error in AppLayout
 
 ## Steps:
-- [x] 1. Edit src/data/use-monthly-stats.ts to add useProductMonthlyStats hook for bought/sold kg per product, filtered by selected month.
-- [x] 2. Edit src/pages/Rapports.tsx: Add month Select top of graph card, replace Revenus mensuels graph with products BarChart (bought/sold kg), update titles.
-- [x] 3. Test changes: Run `npm run dev`, check /rapports page selector and graph.
-- [ ] 4. Mark complete.
-
-Current: Dev server running (fixed vite.config.ts). Task complete - navigate to http://localhost:8080/rapports to see products graph with month selector.
-
+- [x] 1. Fix syntax error in src/pages/Ventes.tsx (complete sales list JSX)
+- [x] 2. Convert src/data/use-stocks.ts to Tanstack Query
+- [ ] 3. Convert src/data/use-clients.ts to Tanstack Query  
+- [ ] 4. Update src/data/use-sales.ts mutation to invalidate new queries
+- [ ] 5. Add ErrorBoundary component to src/App.tsx
+- [ ] 6. Test /ventes route and verify no crashes
+- [ ] 7. Check other pages for similar syntax/data issues if needed
