@@ -19,10 +19,27 @@ export default defineConfig(({ mode }) => ({
       srcDir: 'dist',
       filename: 'sw.js',
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "robots.txt", "Blue app icon design.jpg", "manifest.webmanifest"],
+      includeAssets: ["favicon.ico", "robots.txt", "Blue app icon design.jpg"],
       manifest: {
-        ...require('./public/manifest.webmanifest'),
+        short_name: 'FerAcier',
+        name: 'Fer Acier Pro - Gestionnaire',
+        description: 'Application de gestion pour ferrailleur',
+        theme_color: '#3B82F6',
+        background_color: '#ffffff',
+        display: 'standalone',
         display_override: ["standalone", "fullscreen", "minimal-ui", "browser"],
+        icons: [
+          {
+            src: "Blue app icon design.jpg",
+            sizes: "192x192",
+            type: "image/jpeg"
+          },
+          {
+            src: "Blue app icon design.jpg",
+            sizes: "512x512",
+            type: "image/jpeg"
+          }
+        ]
       },
       devOptions: {
         enabled: true

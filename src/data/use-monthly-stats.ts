@@ -8,6 +8,12 @@ export interface MonthlyStats {
   achats: number;
 }
 
+export interface ProductMonthlyStats {
+  product_name: string;
+  bought: number; // kg
+  sold: number; // kg
+}
+
 const MONTHS_FR = [
   'Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun',
   'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'
@@ -69,5 +75,62 @@ export const useMonthlyStats = () => {
   }, [sales, purchases, salesLoading, purchasesLoading]);
 
   return { monthlyStats, loading: salesLoading || purchasesLoading };
+};
+
+export const useProductMonthlyStats = (selectedMonth?: string) => {
+  const { salesState: sales, loading: salesLoading } = useSales();
+  const { purchasesState: purchases, loading: purchasesLoading } = usePurchases();
+
+  const productStats = useMemo(() => {
+    let filteredSales = sales.filter(s => s.status === 'completed');
+    let filteredPurchases = purchases.filter(p => p.status === 'completed');
+
+    if (selectedMonth) {
+      const year = selectedMonth.split('-')[0];
+      const month = parseInt(selectedMonth.split('-')[1]) - 1;
+      const startDate = new Date(parseInt(year), month, 1);
+      const endDate = new Date(parseInt(year), month + 1, 0);
+
+      filteredSales = filteredSales.filter(s => {
+        const date = new Date(s.date);
+        return date >= startDate && date <= endDate;
+      });
+      filteredPurchases = filteredPurchases.filter(p => {
+        const date = new Date(p.date);
+        return date >= startDate && date <= endDate;
+      });
+    }
+
+    const boughtMap = new Map<string, number>();
+    const soldMap = new Map<string, number>();
+
+    filteredPurchases.forEach(p => {
+      p.products.forEach(item => {
+        boughtMap.set(item.product_name, (boughtMap.get(item.product_name) || 0) + item.quantity);
+      });
+    });
+
+    filteredSales.forEach(s => {
+      s.products.forEach(item => {
+        soldMap.set(item.product_name, (soldMap.get(item.product_name) || 0) + item.quantity);
+      });
+    });
+
+    const stats: ProductMonthlyStats[] = [];
+    const allProducts = new Set([...Array.from(boughtMap.keys()), ...Array.from(soldMap.keys())]);
+
+    allProducts.forEach(productName => {
+      stats.push({
+        product_name: productName,
+        bought: boughtMap.get(productName) || 0,
+        sold: soldMap.get(productName) || 0,
+      });
+    });
+
+    // Sort by total movement desc, top 10
+    return stats.sort((a, b) => (b.bought + b.sold) - (a.bought + a.sold)).slice(0, 10);
+  }, [sales, purchases, selectedMonth]);
+
+  return { productStats, loading: salesLoading || purchasesLoading };
 };
 
