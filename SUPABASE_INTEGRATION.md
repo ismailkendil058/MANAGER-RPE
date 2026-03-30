@@ -33,10 +33,7 @@ Your React app (`fer-acier-pro`) is now fully integrated with Supabase. All loca
    - **VenteDetail.tsx** → Fetches from `useSales()` to display sale details
    - **AchatDetail.tsx** → Fetches from `usePurchases()` to display purchase details
    - **Dashboard.tsx** → Uses `useStocks()` & `useSales()` for KPIs
-   - **Rapports.tsx** → Uses mock `monthlyRevenue` (can be enhanced later with RPC)
-
----
-
+   - **Rapports.tsx** → Uses mock `monthlyRevenue` (can be enhanced later with RP
 ## Database Structure (Deployed)
 
 ```sql
