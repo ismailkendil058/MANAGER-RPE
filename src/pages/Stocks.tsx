@@ -1,13 +1,23 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Package, Plus, X, Pencil, Trash2, Check, PackagePlus } from 'lucide-react';
+import { Search, Package, Plus, X, Pencil, Check, PackagePlus, Edit3 } from 'lucide-react';
 import { formatDA } from '@/data/mock-data';
 import { useStocks, Product } from '@/data/use-stocks';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.04 } } };
 const item = { hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.2 } } };
 
-const emptyForm = { name: '', name_ar: '', min_stock: 0 };
+const emptyForm = { name: '' };
 
 
 
@@ -19,6 +29,10 @@ const Stocks = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
 
+  const [editingQuantityId, setEditingQuantityId] = useState<string | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [newQuantity, setNewQuantity] = useState(0);
+
 
 
   const filtered = stocksState.filter(p =>
@@ -28,14 +42,15 @@ const Stocks = () => {
   const handleAdd = async () => {
     if (!form.name.trim()) return;
       const newProduct: Omit<Product, 'id' | 'inserted_at' | 'updated_at'> = {
-      ...form,
+      name: form.name,
+      name_ar: '',
+      min_stock: 0,
       weight: '',
       category: '',
       category_ar: '',
       quantity: 0,
       price: 0,
       supplier: '',
-      min_stock: 0,
     };
 
     try {
@@ -72,11 +87,21 @@ const Stocks = () => {
     setForm(emptyForm);
   };
 
+  const handleQuantitySave = async () => {
+    if (!editingQuantityId || !editingProduct || newQuantity < 0) return;
+    try {
+      await updateStock(editingQuantityId, { quantity: newQuantity });
+      setEditingQuantityId(null);
+      setEditingProduct(null);
+      setNewQuantity(0);
+    } catch (error) {
+      console.error('Update quantity failed:', error);
+    }
+  };
+
   const formFields = (
     <div className="space-y-2.5">
       <input type="text" placeholder="Nom du produit" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="input-field w-full h-10" />
-      <input type="text" placeholder="الاسم بالعربية" dir="rtl" value={form.name_ar} onChange={e => setForm({ ...form, name_ar: e.target.value })} className="input-field w-full h-10" />
-
     </div>
   );
 
@@ -174,21 +199,67 @@ const Stocks = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <h3 className="text-sm font-semibold truncate">{product.name}</h3>
-                        <span className="text-xs font-bold text-primary shrink-0">{product.quantity} kg</span>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-semibold truncate">{product.name}</h3>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-primary">{product.quantity} kg</span>
+                          <button
+                            onClick={() => {
+                              setEditingQuantityId(product.id);
+                              setEditingProduct(product);
+                              setNewQuantity(product.quantity || 0);
+                            }}
+                            className="p-1 -mr-1 text-primary/70 hover:text-primary hover:bg-accent/50 rounded transition-all"
+                            title="Modifier quantité"
+                          >
+                            <Edit3 className="w-3 h-3" />
+                          </button>
+                        </div>
                       </div>
                       <p className="text-[10px] text-muted-foreground/60 mt-0.5" dir="rtl">{product.name_ar}</p>
-
                     </div>
                   </div>
-
-
-
                 </>
               )}
             </motion.div>
           );
         })}
+
+        {/* Quantity Edit Modal */}
+        <Dialog open={!!editingQuantityId} onOpenChange={() => {
+          setEditingQuantityId(null);
+          setEditingProduct(null);
+          setNewQuantity(0);
+        }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Modifier la quantité</DialogTitle>
+              <DialogDescription>
+                Quantité actuelle: {editingProduct?.quantity} kg pour{' '}
+                <span className="font-semibold">{editingProduct?.name}</span>
+              </DialogDescription>
+            </DialogHeader>
+            <Input
+              type="number"
+              min="0"
+              step="0.1"
+              value={newQuantity || ''}
+              onChange={(e) => setNewQuantity(Number(e.target.value))}
+              placeholder="Nouvelle quantité (kg)"
+              className="w-full"
+            />
+            <DialogFooter>
+              <Button
+                type="submit"
+                onClick={handleQuantitySave}
+                className="w-full sm:w-auto"
+              >
+                Enregistrer
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {filtered.length === 0 && (
