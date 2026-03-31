@@ -97,7 +97,7 @@ export const useSales = () => {
           const newQuantity = currentQuantity - item.quantity;
 
           if (newQuantity < 0) {
-            console.warn(`Insufficient stock for product ${item.product_id}: ${currentQuantity} - ${item.quantity} = ${newQuantity}`);
+            throw new Error(`Quantité insufisante pour ${item.product_name}: stock ${currentQuantity}kg < ${item.quantity}kg demandé`);
           }
 
           await supabase

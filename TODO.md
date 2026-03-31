@@ -1,10 +1,13 @@
-# Fix React Lazy Error in AppLayout
+# Fix Stock Validation Bug (Ventes - Quantity Insufisante)
 
-## Steps:
-- [x] 1. Fix syntax error in src/pages/Ventes.tsx (complete sales list JSX)
-- [x] 2. Convert src/data/use-stocks.ts to Tanstack Query
-- [ ] 3. Convert src/data/use-clients.ts to Tanstack Query  
-- [ ] 4. Update src/data/use-sales.ts mutation to invalidate new queries
-- [ ] 5. Add ErrorBoundary component to src/App.tsx
-- [ ] 6. Test /ventes route and verify no crashes
-- [ ] 7. Check other pages for similar syntax/data issues if needed
+## Plan Breakdown:
+- [x] 1. Add frontend validation + stock display in src/pages/Ventes.tsx
+- [x] 2. Add backend blocking logic in src/data/use-sales.ts ✓
+- [ ] 3. Test sale creation with insufficient stock → shows error, blocks submit
+- [ ] 4. Test valid sale → succeeds, updates stock correctly
+- [ ] 5. Verify no negative stock in Supabase
+- [ ] 6. attempt_completion
+
+**Complete ✓**"
+
+

@@ -60,6 +60,7 @@ const Ventes = () => {
         const product = stocksState.find(p => p.id === String(value));
         if (product) {
           line.productName = product.name;
+          line.unitPrice = product.price || 0; // Auto-fill price
         }
       }
       if (field === 'quantity' || field === 'unitPrice') {
@@ -126,7 +127,12 @@ const Ventes = () => {
     }
   };
 
-  const canSubmit = client.trim() && lines.every(l => l.productId && l.quantity > 0) && !isSubmitting;
+const hasSufficientStock = lines.every(l => {
+  if (!l.productId) return false;
+  const product = stocksState.find(p => p.id === l.productId);
+  return product ? l.quantity <= (product.quantity || 0) : true;
+});
+const canSubmit = client.trim() && lines.every(l => l.productId && l.quantity > 0) && hasSufficientStock && !isSubmitting;
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-4">
@@ -205,8 +211,19 @@ const Ventes = () => {
                               min="1"
                               value={line.quantity || ''}
                               onChange={e => updateLine(i, 'quantity', e.target.value)}
-                              className="input-field w-full h-9 text-sm"
+                              className={`input-field w-full h-9 text-sm ${line.quantity > (stocksState.find(p => p.id === line.productId)?.quantity || 0) ? 'border-destructive focus:border-destructive ring-1 ring-destructive/20' : ''}`}
                             />
+                            {line.productId && (
+                              <div className="mt-1 text-[10px]">
+                                <span className="text-muted-foreground">Stock:</span>{' '}
+                                <span className="font-mono text-xs">
+                                  {stocksState.find(p => p.id === line.productId)?.quantity || 0} kg
+                                </span>
+                                {line.quantity > (stocksState.find(p => p.id === line.productId)?.quantity || 0) && (
+                                  <span className="ml-1 text-destructive font-medium text-[10px]">Quantité insufisante!</span>
+                                )}
+                              </div>
+                            )}
                           </div>
                           <div className="md:col-span-1">
                             <label className="text-[10px] text-muted-foreground mb-1 block">Prix unitaire</label>
