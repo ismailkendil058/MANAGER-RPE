@@ -1,0 +1,1 @@
+/// <reference lib="webworker" />&#10;/* eslint-disable no-undef */&#10;self.__WB_MANIFEST;&#10;&#10;import { precacheAndRoute } from &#39;workbox-precaching&#39;;&#10;precacheAndRoute(self.__WB_MANIFEST);&#10;&#10;self.addEventListener(&#39;activate&#39;, event => {&#10;  event.waitUntil(self.clients.claim());&#10;});

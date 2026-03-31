@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => ({
     react(),
     VitePWA({
       strategies: 'injectManifest',
-      srcDir: 'dist',
+      srcDir: 'src',
       filename: 'sw.js',
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "robots.txt", "Blue app icon design.jpg"],

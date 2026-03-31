@@ -1,11 +1,1 @@
-di# Stocks Quantity Edit Task
-
-## Steps to Complete:
-
-- [ ] Step 1: Create TODO.md with plan breakdown ✅
-- [x] Step 2: Edit src/pages/Stocks.tsx to add imports, states, edit button per product, and quantity edit modal ✅
-- [x] Step 3: Test the implementation ✅ (Dev server running on http://localhost:8093/stocks, functionality added: edit quantity button opens modal, updates via Supabase)
-- [x] Step 4: Update TODO.md with completion status ✅
-- [x] Step 5: Attempt task completion ✅
-
-
+# TODO: Fix Vercel "dist/sw.js" Build Error&#10;&#10;**Progress:**&#10;- [x] Create TODO.md&#10;&#10;**Remaining Steps:**&#10;- [ ] Step 1: Create src/sw.js (service worker template for injectManifest)&#10;- [ ] Step 2: Update vite.config.ts (set srcDir: &#39;src&#39;)&#10;- [ ] Step 3: Test locally with &#39;npm run build&#39; (verify dist/sw.js generated, no Rollup error)&#10;- [ ] Step 4: Update TODO.md with test results&#10;- [ ] Step 5: User commits/pushes for Vercel redeploy
