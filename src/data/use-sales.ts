@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 // @ts-ignore
 import { getAllTableRecords, saveLocally } from '../local-first/storage.js';
 import { persistLocalProductQuantity } from '@/local-first/product-cache';
+import { mergeUnsyncedRecords } from '@/local-first/merge-offline-data';
 
 export interface SaleLineItem {
   id?: number;
@@ -74,8 +75,9 @@ export const useSales = () => {
       })),
     }));
 
-    setSalesState(formatted);
-    localStorage.setItem('erp_sales', JSON.stringify(formatted));
+    const merged = await mergeUnsyncedRecords<Sale>('sales', formatted);
+    setSalesState(merged);
+    localStorage.setItem('erp_sales', JSON.stringify(merged));
     setLoading(false);
     fetchingRef.current = false;
   };
@@ -161,8 +163,13 @@ export const useSales = () => {
 
   const _saveToLocalQueue = async (saleId: string, newSale: Sale) => {
     await saveLocally('sales', saleId, {
-      id: saleId, date: newSale.date, client_id: newSale.client_id,
-      client_name: newSale.client_name, total: newSale.total, status: newSale.status
+      id: saleId,
+      date: newSale.date,
+      client_id: newSale.client_id,
+      client_name: newSale.client_name,
+      total: newSale.total,
+      status: newSale.status,
+      products: newSale.products,
     }, 'create');
 
     for (const item of newSale.products) {

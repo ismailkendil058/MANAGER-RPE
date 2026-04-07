@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 // @ts-ignore
 import { getAllTableRecords, saveLocally } from '../local-first/storage.js';
+import { mergeUnsyncedRecords } from '@/local-first/merge-offline-data';
 
 export interface Product {
   id: string;
@@ -52,9 +53,10 @@ export const useStocks = () => {
     }
 
     const products = data ?? [];
-    setStocksState(products as Product[]);
+    const merged = await mergeUnsyncedRecords<Product>('products', products as Product[]);
+    setStocksState(merged);
 
-    for (const p of products) {
+    for (const p of merged) {
       await saveLocally('products', p.id, p, 'update');
     }
 

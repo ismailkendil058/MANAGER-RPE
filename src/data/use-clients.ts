@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 // @ts-ignore
 import { saveLocally, getAllTableRecords } from '../local-first/storage.js';
+import { mergeUnsyncedRecords } from '@/local-first/merge-offline-data';
 
 export interface Client {
   id: string;
@@ -58,8 +59,9 @@ export const useClients = () => {
     }
 
     const clients = (data ?? []).map(normalizeClient);
-    setClientsState(clients);
-    localStorage.setItem('erp_clients', JSON.stringify(clients));
+    const merged = await mergeUnsyncedRecords<Client>('clients', clients);
+    setClientsState(merged);
+    localStorage.setItem('erp_clients', JSON.stringify(merged));
 
     for (const c of clients) {
       await saveLocally('clients', c.id, c, 'update');

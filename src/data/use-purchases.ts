@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 // @ts-ignore
 import { getAllTableRecords, saveLocally } from '../local-first/storage.js';
 import { persistLocalProductQuantity } from '@/local-first/product-cache';
+import { mergeUnsyncedRecords } from '@/local-first/merge-offline-data';
 
 export interface PurchaseItem {
   id?: number;
@@ -74,8 +75,10 @@ export const usePurchases = () => {
       })),
     }));
 
-    setPurchasesState(formatted);
-    localStorage.setItem('erp_purchases', JSON.stringify(formatted));
+    const merged = await mergeUnsyncedRecords<PurchaseOrder>('purchases', formatted);
+
+    setPurchasesState(merged);
+    localStorage.setItem('erp_purchases', JSON.stringify(merged));
     setLoading(false);
     fetchingRef.current = false;
   };
@@ -161,8 +164,13 @@ export const usePurchases = () => {
 
   const _saveToLocalQueue = async (purchaseId: string, newPurchase: PurchaseOrder) => {
     await saveLocally('purchases', purchaseId, {
-      id: purchaseId, date: newPurchase.date, supplier_id: newPurchase.supplier_id,
-      supplier_name: newPurchase.supplier_name, total: newPurchase.total, status: newPurchase.status
+      id: purchaseId,
+      date: newPurchase.date,
+      supplier_id: newPurchase.supplier_id,
+      supplier_name: newPurchase.supplier_name,
+      total: newPurchase.total,
+      status: newPurchase.status,
+      products: newPurchase.products,
     }, 'create');
 
     for (const item of newPurchase.products) {
