@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 // @ts-ignore
 import { getAllTableRecords, saveLocally } from '../local-first/storage.js';
-import { products as mockProducts } from './mock-data';
 
 export interface Product {
   id: string;
@@ -19,53 +19,117 @@ export interface Product {
   updated_at?: string;
 }
 
-const persistCache = async (items: Product[]) => {
-  await Promise.all(items.map(item => saveLocally('products', item.id, item, 'create')));
-  localStorage.setItem('erp_products', JSON.stringify(items));
-};
-
 export const useStocks = () => {
   const [stocksState, setStocksState] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const fetchingRef = useRef(false);
 
   const fetchStocks = async () => {
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
     setLoading(true);
-    const cached = await getAllTableRecords('products');
 
-    if (cached.length > 0) {
-      setStocksState(cached as Product[]);
-      localStorage.setItem('erp_products', JSON.stringify(cached));
+    if (!navigator.onLine) {
+      const cached = await getAllTableRecords('products');
+      setStocksState(cached.length > 0 ? (cached as Product[]) : []);
       setLoading(false);
+      fetchingRef.current = false;
       return;
     }
 
-    await persistCache(mockProducts);
-    setStocksState(mockProducts);
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('Failed to fetch stocks:', error);
+      const cached = await getAllTableRecords('products');
+      setStocksState(cached.length > 0 ? (cached as Product[]) : []);
+      setLoading(false);
+      fetchingRef.current = false;
+      return;
+    }
+
+    const products = data ?? [];
+    setStocksState(products as Product[]);
+
+    for (const p of products) {
+      await saveLocally('products', p.id, p, 'update');
+    }
+
     setLoading(false);
+    fetchingRef.current = false;
   };
 
   useEffect(() => {
     fetchStocks();
+
+    const handleOnline = () => setTimeout(fetchStocks, 1500);
+    const handleSwSync = () => setTimeout(fetchStocks, 500);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('sw-sync-complete', handleSwSync);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('sw-sync-complete', handleSwSync);
+    };
   }, []);
 
   const addStock = async (product: Omit<Product, 'id' | 'inserted_at' | 'updated_at'>) => {
     const newId = String(Date.now());
     const newProduct = { ...product, id: newId };
+
     setStocksState(prev => [...prev, newProduct]);
-    await saveLocally('products', newId, newProduct, 'create');
+
+    if (navigator.onLine) {
+      try {
+        const { error } = await supabase.from('products').insert(newProduct);
+        if (error) throw error;
+      } catch (err) {
+        console.error('Direct addStock failed, queuing locally:', err);
+        await saveLocally('products', newId, newProduct, 'create');
+      }
+    } else {
+      await saveLocally('products', newId, newProduct, 'create');
+    }
   };
 
   const updateStock = async (id: string, update: Partial<Product>) => {
     const current = stocksState.find(s => s.id === id);
     if (!current) return;
     const updatedProduct = { ...current, ...update };
+
     setStocksState(prev => prev.map(s => (s.id === id ? updatedProduct : s)));
-    await saveLocally('products', id, updatedProduct, 'update');
+
+    if (navigator.onLine) {
+      try {
+        const { error } = await supabase.from('products').update(update).eq('id', id);
+        if (error) throw error;
+        await saveLocally('products', id, updatedProduct, 'update');
+      } catch (err) {
+        console.error('Direct updateStock failed, queuing locally:', err);
+        await saveLocally('products', id, updatedProduct, 'update');
+      }
+    } else {
+      await saveLocally('products', id, updatedProduct, 'update');
+    }
   };
 
   const deleteStock = async (id: string) => {
     setStocksState(prev => prev.filter(s => s.id !== id));
-    await saveLocally('products', id, null, 'delete');
+
+    if (navigator.onLine) {
+      try {
+        const { error } = await supabase.from('products').delete().eq('id', id);
+        if (error) throw error;
+      } catch (err) {
+        console.error('Direct deleteStock failed, queuing locally:', err);
+        await saveLocally('products', id, null, 'delete');
+      }
+    } else {
+      await saveLocally('products', id, null, 'delete');
+    }
   };
 
   return { stocksState, loading, fetchStocks, addStock, updateStock, deleteStock };
