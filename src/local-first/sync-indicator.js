@@ -5,7 +5,7 @@ class SyncIndicator {
     constructor() {
         this.container = document.createElement('div');
         this.container.style.position = 'fixed';
-        this.container.style.bottom = '20px';
+        this.container.style.top = '20px';
         this.container.style.right = '20px';
         this.container.style.padding = '8px 12px';
         this.container.style.background = '#333';

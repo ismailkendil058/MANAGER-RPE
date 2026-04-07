@@ -33,7 +33,6 @@ const Ventes = () => {
     { productId: '', productName: '', quantity: 1, unitPrice: 0, total: 0 },
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [returningId, setReturningId] = useState<string | null>(null);
 
   const totalSales = sales.reduce((sum, s) => sum + s.total, 0);
 
@@ -117,18 +116,7 @@ const Ventes = () => {
     }
   };
 
-  const handleReturn = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    if (returningId) return;
-    setReturningId(id);
-    try {
-      await returnSale(id);
-    } catch (error) {
-      console.error('Failed to return:', error);
-    } finally {
-      setReturningId(null);
-    }
-  };
+
 
   const canSubmit = client.trim() && lines.every(l => l.productId && l.quantity > 0);
 
@@ -318,7 +306,13 @@ const Ventes = () => {
 
               <div className="space-y-4">
                 {daySales.map(sale => (
-                  <motion.div key={sale.id} whileTap={{ scale: 0.98 }} className="premium-card">
+                  <motion.div 
+                    key={sale.id} 
+                    whileTap={{ scale: 0.98 }} 
+                    className="premium-card cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => navigate(`/vente/${sale.id}`)}
+                  >
+
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center">
@@ -330,18 +324,11 @@ const Ventes = () => {
                         </div>
                       </div>
                       <div className="text-right flex flex-col items-end gap-1.5 mt-1">
-                        <p className="text-sm font-black text-slate-900 leading-none">{formatDA(sale.total)}</p>
-                        {sale.status === 'returned' ? (
-                          <span className="text-[9px] font-black uppercase text-red-500 bg-red-50 px-2.5 py-1 rounded-full tracking-wider mt-1">Retourné</span>
-                        ) : (
-                          <button
-                            onClick={(e) => handleReturn(e, sale.id)}
-                            disabled={!!returningId}
-                            className="text-[9px] font-black uppercase text-white bg-red-500 hover:bg-red-600 active:scale-95 px-3 py-1 rounded-full tracking-wider transition-all shadow-sm shadow-red-500/20 mt-1 disabled:opacity-50 disabled:active:scale-100"
-                          >
-                            {returningId === sale.id ? 'Patientez...' : 'Retourner'}
-                          </button>
+                        <p className="text-sm font-black text-slate-900 leading-none mb-1.5">{formatDA(sale.total)}</p>
+                        {sale.status === 'returned' && (
+                          <span className="text-[9px] font-black uppercase text-red-500 bg-red-50 px-2.5 py-1 rounded-full tracking-wider">Retourné</span>
                         )}
+
                       </div>
                     </div>
 
