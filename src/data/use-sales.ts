@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+// @ts-ignore
+import { getAllTableRecords, saveLocally } from '../local-first/storage.js';
 
 export interface SaleLineItem {
   id?: number;
@@ -27,6 +29,17 @@ export const useSales = () => {
 
   const fetchSales = async () => {
     setLoading(true);
+
+    if (!navigator.onLine) {
+      const cached = await getAllTableRecords('sales');
+      // Reconstruct nested structure from cached flat data if needed, or if saved nested, just use it 
+      // Note: we can just use the local UI cache here for full structure
+      const localCache = localStorage.getItem('erp_sales');
+      if (localCache) setSalesState(JSON.parse(localCache));
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('sales')
       .select('*, sale_items(*)')
@@ -34,6 +47,8 @@ export const useSales = () => {
 
     if (error) {
       console.error('Failed to fetch sales:', error);
+      const cached = localStorage.getItem('erp_sales');
+      if (cached) setSalesState(JSON.parse(cached));
       setLoading(false);
       return;
     }
@@ -57,60 +72,65 @@ export const useSales = () => {
     }));
 
     setSalesState(formatted);
+    localStorage.setItem('erp_sales', JSON.stringify(formatted));
     setLoading(false);
   };
 
   useEffect(() => {
     fetchSales();
+
+    // Add network listener to refetch when coming online
+    const handleOnline = () => fetchSales();
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
   }, []);
 
   const addSale = async (sale: Omit<Sale, 'id'>) => {
     const saleId = `V-${String(Date.now())}`;
-    const newSale = { ...sale, id: saleId };
+    const newSale = { ...sale, id: saleId, status: sale.status || 'completed' } as Sale;
 
-    const { error: saleError } = await supabase.from('sales').insert([{ id: saleId, date: sale.date, client_id: sale.client_id, client_name: sale.client_name, total: sale.total, status: sale.status }]);
-    if (saleError) throw saleError;
+    // Optimistic Update
+    const newState = [newSale, ...salesState];
+    setSalesState(newState);
+    localStorage.setItem('erp_sales', JSON.stringify(newState));
 
-    const itemRows = sale.products.map(item => ({
-      sale_id: saleId,
-      product_id: item.product_id,
-      product_name: item.product_name,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      total: item.total,
-    }));
+    // Save strictly to local Vanilla JS layer
+    await saveLocally('sales', saleId, { id: saleId, date: newSale.date, client_id: newSale.client_id, client_name: newSale.client_name, total: newSale.total, status: newSale.status }, 'create');
 
-    const { error: itemsError } = await supabase.from('sale_items').insert(itemRows);
-    if (itemsError) throw itemsError;
+    for (const item of newSale.products) {
+      await saveLocally('sale_items', `item-${Date.now()}-${Math.random()}`, {
+        sale_id: saleId,
+        product_id: item.product_id,
+        product_name: item.product_name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total: item.total,
+      }, 'create');
+    }
 
-    // Update stock quantities for each product (deduct sold quantity)
-    for (const item of sale.products) {
+    // Update stock quantities natively via local records when offline
+    const localProducts = await getAllTableRecords('products');
+    for (const item of newSale.products) {
       try {
-        const { data: currentProduct } = await supabase
-          .from('products')
-          .select('quantity')
-          .eq('id', item.product_id)
-          .single();
+        let currentQuantity = 0;
 
-        const currentQuantity = currentProduct?.quantity || 0;
-        const quantityChange = sale.status === 'returned' ? item.quantity : -item.quantity;
-        const newQuantity = Math.max(0, currentQuantity + quantityChange);
-
-        if (newQuantity < 0 && sale.status !== 'returned') {
-          console.warn(`Insufficient stock for product ${item.product_id}: ${currentQuantity} - ${item.quantity} = ${newQuantity}`);
+        if (navigator.onLine) {
+          const { data } = await supabase.from('products').select('quantity').eq('id', item.product_id).single();
+          currentQuantity = data?.quantity || 0;
+        } else {
+          const prod = localProducts.find((p: any) => p.id === item.product_id);
+          currentQuantity = prod?.quantity || 0;
         }
 
-        await supabase
-          .from('products')
-          .update({ quantity: newQuantity })
-          .eq('id', item.product_id);
+        const quantityChange = newSale.status === 'returned' ? item.quantity : -item.quantity;
+        const newQuantity = Math.max(0, currentQuantity + quantityChange);
+
+        await saveLocally('products', item.product_id, { quantity: newQuantity }, 'update');
       } catch (stockError) {
         console.error(`Failed to update stock for product ${item.product_id}:`, stockError);
-        // Continue even if stock update fails
       }
     }
 
-    await fetchSales();
     return newSale;
   };
 
@@ -118,36 +138,33 @@ export const useSales = () => {
     const sale = salesState.find(s => s.id === saleId);
     if (!sale || sale.status === 'returned') return;
 
-    // 1. Update status to returned
-    const { error: saleError } = await supabase
-      .from('sales')
-      .update({ status: 'returned' })
-      .eq('id', saleId);
+    // Optimistic Update
+    const newState = salesState.map(s => s.id === saleId ? { ...s, status: 'returned' as const } : s);
+    setSalesState(newState);
+    localStorage.setItem('erp_sales', JSON.stringify(newState));
 
-    if (saleError) throw saleError;
+    // 1. Update status to returned locally
+    await saveLocally('sales', saleId, { status: 'returned' }, 'update');
 
-    // 2. Add quantity back to stock
+    // 2. Add quantity back to stock using local fallback
+    const localProducts = await getAllTableRecords('products');
     for (const item of sale.products) {
       try {
-        const { data: currentProduct } = await supabase
-          .from('products')
-          .select('quantity')
-          .eq('id', item.product_id)
-          .single();
+        let currentQuantity = 0;
+        if (navigator.onLine) {
+          const { data } = await supabase.from('products').select('quantity').eq('id', item.product_id).single();
+          currentQuantity = data?.quantity || 0;
+        } else {
+          const prod = localProducts.find((p: any) => p.id === item.product_id);
+          currentQuantity = prod?.quantity || 0;
+        }
 
-        const currentQuantity = currentProduct?.quantity || 0;
         const newQuantity = currentQuantity + item.quantity;
-
-        await supabase
-          .from('products')
-          .update({ quantity: newQuantity })
-          .eq('id', item.product_id);
+        await saveLocally('products', item.product_id, { quantity: newQuantity }, 'update');
       } catch (stockError) {
         console.error(`Failed to restock product ${item.product_id}:`, stockError);
       }
     }
-
-    await fetchSales();
   };
 
   return { salesState, loading, fetchSales, addSale, returnSale };

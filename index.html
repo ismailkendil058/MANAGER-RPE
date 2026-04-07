@@ -33,7 +33,7 @@
 
     #root {
       min-height: 100%;
-      min-height: 100vh;
+      min-height: 100dvh;
       width: 100%;
       overflow: auto;
     }
@@ -53,6 +53,15 @@
 <body class="h-full">
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
+
+  <!-- Load the Vanilla JS Supabase Client for Realtime syncing -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Load your local-first system -->
+  <script type="module" src="/src/local-first/storage.js"></script>
+  <script type="module" src="/src/local-first/sync.js"></script>
+  <script type="module" src="/src/local-first/realtime.js"></script>
+  <script type="module" src="/src/local-first/sync-indicator.js"></script>
 </body>
 
 </html>

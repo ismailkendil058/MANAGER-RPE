@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+// @ts-ignore
+import { getAllTableRecords, saveLocally } from '../local-first/storage.js';
 
 export interface PurchaseItem {
   id?: number;
@@ -27,6 +29,15 @@ export const usePurchases = () => {
 
   const fetchPurchases = async () => {
     setLoading(true);
+
+    if (!navigator.onLine) {
+      const cached = await getAllTableRecords('purchases');
+      const localCache = localStorage.getItem('erp_purchases');
+      if (localCache) setPurchasesState(JSON.parse(localCache));
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('purchases')
       .select('*, purchase_items(*)')
@@ -34,6 +45,8 @@ export const usePurchases = () => {
 
     if (error) {
       console.error('Failed to fetch purchases:', error);
+      const cached = localStorage.getItem('erp_purchases');
+      if (cached) setPurchasesState(JSON.parse(cached));
       setLoading(false);
       return;
     }
@@ -57,95 +70,101 @@ export const usePurchases = () => {
     }));
 
     setPurchasesState(formatted);
+    localStorage.setItem('erp_purchases', JSON.stringify(formatted));
     setLoading(false);
   };
 
   useEffect(() => {
     fetchPurchases();
+
+    // Add network listener to refetch when coming online
+    const handleOnline = () => fetchPurchases();
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
   }, []);
 
   const addPurchase = async (purchase: Omit<PurchaseOrder, 'id'>) => {
     const purchaseId = `A-${String(Date.now())}`;
+    const newPurchase = { ...purchase, id: purchaseId, status: purchase.status || 'completed' } as PurchaseOrder;
 
-    const { error: purchaseError } = await supabase.from('purchases').insert([{ id: purchaseId, date: purchase.date, supplier_id: purchase.supplier_id, supplier_name: purchase.supplier_name, total: purchase.total, status: purchase.status }]);
-    if (purchaseError) throw purchaseError;
+    // Optimistic Update
+    const newState = [newPurchase, ...purchasesState];
+    setPurchasesState(newState);
+    localStorage.setItem('erp_purchases', JSON.stringify(newState));
 
-    const itemRows = purchase.products.map(item => ({
-      purchase_id: purchaseId,
-      product_id: item.product_id,
-      product_name: item.product_name,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      total: item.total,
-    }));
+    await saveLocally('purchases', purchaseId, { id: purchaseId, date: newPurchase.date, supplier_id: newPurchase.supplier_id, supplier_name: newPurchase.supplier_name, total: newPurchase.total, status: newPurchase.status }, 'create');
 
-    const { error: itemsError } = await supabase.from('purchase_items').insert(itemRows);
-    if (itemsError) throw itemsError;
+    for (const item of newPurchase.products) {
+      await saveLocally('purchase_items', `item-${Date.now()}-${Math.random()}`, {
+        purchase_id: purchaseId,
+        product_id: item.product_id,
+        product_name: item.product_name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total: item.total,
+      }, 'create');
+    }
 
-    // Update stock quantities for each product
-    for (const item of purchase.products) {
+    // Update stock quantities for each product natively
+    const localProducts = await getAllTableRecords('products');
+    for (const item of newPurchase.products) {
       try {
-        const { data: currentProduct } = await supabase
-          .from('products')
-          .select('quantity')
-          .eq('id', item.product_id)
-          .single();
+        let currentQuantity = 0;
 
-        const currentQuantity = currentProduct?.quantity || 0;
-        const quantityChange = purchase.status === 'returned' ? -item.quantity : item.quantity;
+        if (navigator.onLine) {
+          const { data } = await supabase.from('products').select('quantity').eq('id', item.product_id).single();
+          currentQuantity = data?.quantity || 0;
+        } else {
+          const prod = localProducts.find((p: any) => p.id === item.product_id);
+          currentQuantity = prod?.quantity || 0;
+        }
+
+        const quantityChange = newPurchase.status === 'returned' ? -item.quantity : item.quantity;
         const newQuantity = Math.max(0, currentQuantity + quantityChange);
 
-        await supabase
-          .from('products')
-          .update({ quantity: newQuantity })
-          .eq('id', item.product_id);
+        await saveLocally('products', item.product_id, { quantity: newQuantity }, 'update');
       } catch (stockError) {
         console.error(`Failed to update stock for product ${item.product_id}:`, stockError);
-        // Continue even if stock update fails
       }
     }
 
-    await fetchPurchases();
-    return { ...purchase, id: purchaseId };
+    return newPurchase;
   };
 
   const returnPurchase = async (purchaseId: string) => {
     const purchase = purchasesState.find(p => p.id === purchaseId);
     if (!purchase || purchase.status === 'returned') return;
 
-    // 1. Update status to returned
-    const { error: purchaseError } = await supabase
-      .from('purchases')
-      .update({ status: 'returned' })
-      .eq('id', purchaseId);
+    // Optimistic Update
+    const newState = purchasesState.map(p => p.id === purchaseId ? { ...p, status: 'returned' as const } : p);
+    setPurchasesState(newState);
+    localStorage.setItem('erp_purchases', JSON.stringify(newState));
 
-    if (purchaseError) throw purchaseError;
+    // 1. Update status to returned locally
+    await saveLocally('purchases', purchaseId, { status: 'returned' }, 'update');
 
-    // 2. Remove quantity back from stock
+    // 2. Remove quantity back from stock using local fallback
+    const localProducts = await getAllTableRecords('products');
     for (const item of purchase.products) {
       try {
-        const { data: currentProduct } = await supabase
-          .from('products')
-          .select('quantity')
-          .eq('id', item.product_id)
-          .single();
+        let currentQuantity = 0;
 
-        const currentQuantity = currentProduct?.quantity || 0;
+        if (navigator.onLine) {
+          const { data } = await supabase.from('products').select('quantity').eq('id', item.product_id).single();
+          currentQuantity = data?.quantity || 0;
+        } else {
+          const prod = localProducts.find((p: any) => p.id === item.product_id);
+          currentQuantity = prod?.quantity || 0;
+        }
+
         const newQuantity = Math.max(0, currentQuantity - item.quantity);
 
-        await supabase
-          .from('products')
-          .update({ quantity: newQuantity })
-          .eq('id', item.product_id);
+        await saveLocally('products', item.product_id, { quantity: newQuantity }, 'update');
       } catch (stockError) {
         console.error(`Failed to deduct stock for product ${item.product_id}:`, stockError);
       }
     }
-
-    await fetchPurchases();
   };
 
   return { purchasesState, loading, fetchPurchases, addPurchase, returnPurchase };
 };
-
-

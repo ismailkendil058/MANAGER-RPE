@@ -32,17 +32,17 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#F9FBFF] overflow-hidden relative font-sans">
+    <div className="flex flex-col h-[100dvh] w-full bg-[#F9FBFF] overflow-hidden relative font-sans">
       <OfflineStatus />
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100 flex items-center justify-between px-6 h-16 shrink-0 transition-all duration-300">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100 flex items-center justify-between px-6 pt-[max(1rem,env(safe-area-inset-top))] pb-3 shrink-0 transition-all duration-300">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 bg-primary flex items-center justify-center rounded-xl shadow-lg shadow-primary/20">
-            <span className="text-white font-black text-xs">NOVA</span>
+            <span className="text-white font-black text-xs">ERP</span>
           </div>
           <div>
-            <h1 className="text-sm font-black tracking-tight text-slate-900 leading-none">NOVA PRO</h1>
+            <h1 className="text-sm font-black tracking-tight text-slate-900 leading-none">ERP</h1>
             <p className="text-[9px] text-primary font-bold uppercase tracking-widest mt-1">Acier & Fer</p>
           </div>
         </div>
@@ -55,8 +55,8 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-x-hidden overflow-y-auto pt-16">
-        <div className="max-w-md mx-auto px-5 pt-4 pb-32">
+      <main className="flex-1 overflow-x-hidden overflow-y-auto pt-[calc(max(1rem,env(safe-area-inset-top))+4rem)]">
+        <div className="max-w-md mx-auto px-5 pt-4 pb-[calc(8rem+env(safe-area-inset-bottom))]">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
@@ -72,7 +72,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[400px] z-[50]">
+      <nav className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 w-[92%] max-w-[400px] z-[50]">
         <div className="bg-white/90 backdrop-blur-2xl border border-white/40 rounded-[2rem] p-1.5 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.08)]">
           {navItems.map((item) => {
             const Icon = item.icon;

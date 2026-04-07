@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+// @ts-ignore
+import { getAllTableRecords, saveLocally } from '../local-first/storage.js';
 
 export interface Product {
   id: string;
@@ -23,6 +25,14 @@ export const useStocks = () => {
 
   const fetchStocks = async () => {
     setLoading(true);
+
+    if (!navigator.onLine) {
+      const cached = await getAllTableRecords('products');
+      setStocksState(cached.length > 0 ? cached : []);
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('products')
       .select('*')
@@ -30,37 +40,58 @@ export const useStocks = () => {
 
     if (error) {
       console.error('Failed to fetch stocks:', error);
+      const cached = await getAllTableRecords('products');
+      setStocksState(cached.length > 0 ? cached : []);
       setLoading(false);
       return;
     }
 
-    setStocksState(data ?? []);
+    const products = data ?? [];
+    setStocksState(products);
+
+    // Seed the local-first indexedDB if empty
+    for (const p of products) {
+      await saveLocally('products', p.id, p, 'update');
+    }
+
     setLoading(false);
   };
 
   useEffect(() => {
     fetchStocks();
+
+    // Add network listener to refetch when coming online
+    const handleOnline = () => fetchStocks();
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
   }, []);
 
   const addStock = async (product: Omit<Product, 'id' | 'inserted_at' | 'updated_at'>) => {
     const newId = String(Date.now());
-    const { error } = await supabase.from('products').insert([{ ...product, id: newId }]);
-    if (error) throw error;
-    await fetchStocks();
+    const newProduct = { ...product, id: newId };
+
+    // Optimistic Update & Local-First save
+    const newState = [...stocksState, newProduct];
+    setStocksState(newState);
+    await saveLocally('products', newId, newProduct, 'create');
   };
 
   const updateStock = async (id: string, update: Partial<Product>) => {
-    const { error } = await supabase.from('products').update(update).eq('id', id);
-    if (error) throw error;
-    await fetchStocks();
+    // Optimistic Update
+    const current = stocksState.find(s => s.id === id);
+    const updatedProduct = { ...(current as Product), ...update };
+
+    const newState = stocksState.map(s => s.id === id ? updatedProduct : s);
+    setStocksState(newState);
+    await saveLocally('products', id, updatedProduct, 'update');
   };
 
   const deleteStock = async (id: string) => {
-    const { error } = await supabase.from('products').delete().eq('id', id);
-    if (error) throw error;
-    await fetchStocks();
+    // Optimistic Update
+    const newState = stocksState.filter(s => s.id !== id);
+    setStocksState(newState);
+    await saveLocally('products', id, null, 'delete');
   };
 
   return { stocksState, loading, fetchStocks, addStock, updateStock, deleteStock };
 };
-
