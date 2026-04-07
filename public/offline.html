@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hors Ligne - Recyclage Pro</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 500px;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        .icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #132b6e;
+            margin-top: 0;
+        }
+
+        p {
+            color: #64748b;
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }
+
+        .features {
+            background: #f1f5f9;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: left;
+            margin-bottom: 24px;
+        }
+
+        .features h3 {
+            margin-top: 0;
+            font-size: 16px;
+            color: #334155;
+        }
+
+        .features ul {
+            margin: 0;
+            padding-left: 20px;
+            color: #475569;
+        }
+
+        .btn {
+            background-color: #132b6e;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover {
+            background-color: #1e3a8a;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="icon">📡</div>
+        <h1>Vous êtes hors ligne</h1>
+        <p>Il semble que vous ayez perdu votre connexion internet. Ne vous inquiétez pas, l'application est conçue pour
+            fonctionner avec des fonctionnalités limitées.</p>
+
+        <div class="features">
+            <h3>Disponibles hors ligne :</h3>
+            <ul>
+                <li>Consultation des dernières données chargées</li>
+                <li>Mise en file d'attente de certaines actions</li>
+            </ul>
+        </div>
+
+        <button class="btn" onclick="window.location.reload()">Réessayer</button>
+    </div>
+</body>
+
+</html>
