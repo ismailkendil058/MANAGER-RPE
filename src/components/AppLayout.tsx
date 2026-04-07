@@ -74,7 +74,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 w-[96%] max-w-[440px] z-[50]">
+      <nav className="fixed bottom-[max(0.25rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 w-[96%] max-w-[440px] z-[50]">
         <div className="bg-white/90 backdrop-blur-2xl border border-white/40 rounded-[2rem] p-1 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.08)]">
           {navItems.map((item) => {
             const Icon = item.icon;
