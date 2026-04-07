@@ -20,15 +20,15 @@ const AchatDetail = () => {
 
   if (!purchase) {
     return (
-      <motion.div 
-        initial={{ opacity: 0 }} 
-        animate={{ opacity: 1 }} 
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         className="flex flex-col items-center justify-center min-h-screen text-muted-foreground p-4"
       >
         <ShoppingBag className="w-12 h-12 opacity-40 mb-3" />
         <p className="text-base font-semibold mb-2 text-center">Bon d'achat non trouvé</p>
-        <button 
-          onClick={() => navigate('/fournisseurs')} 
+        <button
+          onClick={() => navigate('/achats')}
           className="text-accent hover:underline flex items-center gap-1 text-xs font-medium"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
@@ -39,82 +39,70 @@ const AchatDetail = () => {
   }
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, scale: 0.95 }} 
-      animate={{ opacity: 1, scale: 1 }} 
-      exit={{ opacity: 0, scale: 0.95 }}
-      className="p-3 pb-20 space-y-3 max-w-sm mx-auto"
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-6"
     >
-      {/* Header Card */}
-      <div className="glass-card p-4 rounded-xl shadow-lg">
-        <div className="flex items-center justify-between mb-3">
-          <button 
-            onClick={() => navigate('/fournisseurs')} 
-            className="flex items-center gap-1 p-1.5 rounded-lg bg-background/60 hover:bg-accent/10 text-muted-foreground hover:text-accent active:scale-95 transition-all"
-            aria-label="Retour"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${purchase.status === 'completed' ? 'bg-emerald/10 text-emerald-600 border border-emerald/30' : 'bg-orange/10 text-orange-600 border border-orange/30'}`}>
-            {purchase.status === 'completed' ? 'Complété' : 'En attente'}
-          </span>
-        </div>
-        <div className="text-center mb-4">
-          <div className="w-14 h-14 bg-gradient-to-br from-accent to-accent/60 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-md">
-            <ShoppingBag className="w-7 h-7 text-background" />
-          </div>
-          <h1 className="text-xl font-black bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent mb-1 leading-tight">
-            Bon #{purchase.id}
-          </h1>
-          <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-            <div className="flex items-center justify-center gap-1 py-1.5 px-2.5 bg-background/60 rounded-lg">
-              <Truck className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="font-medium truncate max-w-[120px]">{purchase.supplier_name}</span>
-            </div>
-            <div className="flex items-center justify-center gap-1 py-1.5 px-2.5 bg-background/60 rounded-lg">
-              <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="truncate">{new Date(purchase.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-            </div>
-          </div>
+      {/* Header */}
+      <div className="flex items-center justify-between px-1">
+        <button
+          onClick={() => navigate('/achats')}
+          className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center active:scale-90 transition-transform"
+        >
+          <ArrowLeft className="w-5 h-5 text-slate-600" />
+        </button>
+        <div className="text-right">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Référence</p>
+          <p className="text-sm font-black text-slate-900">#{purchase.id}</p>
         </div>
       </div>
 
-      {/* Products List */}
-      <div className="glass-card p-4 rounded-xl shadow-lg flex-1">
-        <div className="flex items-center gap-1.5 mb-3 pb-2 border-b border-border/40">
-          <Package className="w-4 h-4 text-accent" />
-          <h2 className="font-semibold text-sm">Produits ({purchase.products.length})</h2>
-        </div>
-        <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-hide -mr-2 pr-2">
-          {purchase.products.map((product, index) => (
-            <div key={index} className="glass-card p-3 rounded-lg bg-surface/40 border-border/10">
-              <div className="space-y-1">
-                <div className="font-medium text-xs leading-tight mb-1 min-h-[32px]">{product.product_name}</div>
-                <div className="grid grid-cols-4 gap-2 text-[10px] text-muted-foreground items-center">
-                  <span className="font-mono col-span-2 text-left">{product.quantity}kg × {formatDA(product.unit_price)}</span>
-                  <span className="font-bold text-accent text-right col-span-2">{formatDA(product.total)}</span>
-                </div>
+      {/* Main Info Card */}
+      <div className="premium-card p-6 relative overflow-hidden">
+        <div className="flex items-start justify-between mb-8 relative z-10">
+          <div>
+            <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Fournisseur</p>
+            <h1 className="text-xl font-black text-slate-900 tracking-tight">{purchase.supplier_name}</h1>
+            <div className="flex items-center gap-3 mt-3">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 rounded-lg text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                <Calendar className="w-3.5 h-3.5" />
+                {new Date(purchase.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
               </div>
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Grand Total Card */}
-      <div className="glass-card p-4 rounded-xl shadow-xl bg-gradient-to-b from-background via-surface/30 to-surface/50 border-accent/30">
-        <div className="flex items-baseline justify-between">
-          <span className="text-base font-semibold text-muted-foreground tracking-wide uppercase">Grand Total</span>
-          <div className="text-right">
-            <div className="text-2xl font-black bg-gradient-to-r from-accent via-primary to-accent/70 bg-clip-text text-transparent leading-tight">
-              {formatDA(purchase.total)}
-            </div>
-            <div className="text-[10px] text-muted-foreground mt-0.5 font-medium uppercase tracking-wider">DA</div>
+          </div>
+          <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${purchase.status === 'completed' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'}`}>
+            {purchase.status === 'completed' ? 'Stock Entré' : 'En attente'}
           </div>
         </div>
+
+        <div className="space-y-4 relative z-10">
+          <div className="flex items-center gap-2 mb-4">
+            <Package className="w-4 h-4 text-slate-400" />
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Articles achetés</h3>
+          </div>
+          <div className="space-y-3">
+            {purchase.products.map((product, index) => (
+              <div key={index} className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0">
+                <div className="flex-1 pr-4">
+                  <p className="text-sm font-black text-slate-900 mb-0.5">{product.product_name}</p>
+                  <p className="text-[10px] font-bold text-slate-400">{product.quantity} kg × {formatDA(product.unit_price)}</p>
+                </div>
+                <p className="text-sm font-black text-slate-900">{formatDA(product.total)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between relative z-10">
+          <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Montant Total</span>
+          <span className="text-2xl font-black text-primary tracking-tighter">{formatDA(purchase.total)}</span>
+        </div>
+
+        <div className="absolute -right-4 -top-4 w-32 h-32 bg-primary/5 rounded-full blur-3xl" />
       </div>
     </motion.div>
   );
 };
 
 export default AchatDetail;
-

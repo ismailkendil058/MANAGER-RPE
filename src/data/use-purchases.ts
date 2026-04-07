@@ -18,7 +18,7 @@ export interface PurchaseOrder {
   supplier_name: string;
   products: PurchaseItem[];
   total: number;
-  status: 'completed' | 'pending';
+  status: 'completed' | 'pending' | 'returned';
 }
 
 export const usePurchases = () => {
@@ -92,7 +92,8 @@ export const usePurchases = () => {
           .single();
 
         const currentQuantity = currentProduct?.quantity || 0;
-        const newQuantity = currentQuantity + item.quantity;
+        const quantityChange = purchase.status === 'returned' ? -item.quantity : item.quantity;
+        const newQuantity = Math.max(0, currentQuantity + quantityChange);
 
         await supabase
           .from('products')
@@ -108,7 +109,43 @@ export const usePurchases = () => {
     return { ...purchase, id: purchaseId };
   };
 
-  return { purchasesState, loading, fetchPurchases, addPurchase };
+  const returnPurchase = async (purchaseId: string) => {
+    const purchase = purchasesState.find(p => p.id === purchaseId);
+    if (!purchase || purchase.status === 'returned') return;
+
+    // 1. Update status to returned
+    const { error: purchaseError } = await supabase
+      .from('purchases')
+      .update({ status: 'returned' })
+      .eq('id', purchaseId);
+
+    if (purchaseError) throw purchaseError;
+
+    // 2. Remove quantity back from stock
+    for (const item of purchase.products) {
+      try {
+        const { data: currentProduct } = await supabase
+          .from('products')
+          .select('quantity')
+          .eq('id', item.product_id)
+          .single();
+
+        const currentQuantity = currentProduct?.quantity || 0;
+        const newQuantity = Math.max(0, currentQuantity - item.quantity);
+
+        await supabase
+          .from('products')
+          .update({ quantity: newQuantity })
+          .eq('id', item.product_id);
+      } catch (stockError) {
+        console.error(`Failed to deduct stock for product ${item.product_id}:`, stockError);
+      }
+    }
+
+    await fetchPurchases();
+  };
+
+  return { purchasesState, loading, fetchPurchases, addPurchase, returnPurchase };
 };
 
 

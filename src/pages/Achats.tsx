@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, Plus, FileText, Calendar, X, Check, Trash2 } from 'lucide-react';
+import { ShoppingBag, Plus, FileText, Calendar, X, Check, Trash2, RotateCcw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDA } from '@/data/mock-data';
 import { usePurchases } from '@/data/use-purchases';
@@ -20,10 +21,11 @@ interface LineItem {
 
 const Achats = () => {
   const navigate = useNavigate();
-  const { purchasesState: purchases, loading: purchasesLoading, fetchPurchases, addPurchase } = usePurchases();
+  const { purchasesState: purchases, loading: purchasesLoading, fetchPurchases, addPurchase, returnPurchase } = usePurchases();
   const { stocksState, loading: stocksLoading, fetchStocks } = useStocks();
   const { suppliersState, loading: suppliersLoading, fetchSuppliers, addSupplier } = useSuppliers();
   const [showForm, setShowForm] = useState(false);
+  const [isRetour, setIsRetour] = useState(false);
 
   // Form state
   const [supplier, setSupplier] = useState('');
@@ -74,6 +76,7 @@ const Achats = () => {
     setNewSupplierName('');
     setShowAddSupplier(false);
     setShowForm(false);
+    setIsRetour(false);
   };
 
   const addNewSupplier = async () => {
@@ -107,11 +110,14 @@ const Achats = () => {
         total: l.total,
       })),
       total: grandTotal,
-      status: 'completed' as const,
+      status: isRetour ? ('returned' as const) : ('completed' as const),
     };
 
     try {
-      await addPurchase(newPurchase);
+      await addPurchase({
+        ...newPurchase,
+        supplier_name: suppliersState.find(s => s.id === supplier)?.name || 'Inconnu'
+      });
       await fetchStocks();
       await fetchSuppliers();
       resetForm();
@@ -120,240 +126,196 @@ const Achats = () => {
     }
   };
 
-  const canSubmit = supplier.trim() && lines.every(l => l.productId && l.quantity > 0);
+  const canSubmit = supplier && lines.every(l => l.productId && l.quantity > 0);
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-4">
-      <motion.div variants={item} className="flex items-start justify-between">
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
+      <motion.div variants={item} className="flex items-end justify-between px-1">
         <div>
-          <h1 className="text-lg font-bold">Achats</h1>
-          <p className="text-xs text-muted-foreground">بونوات الشراء — {formatDA(totalPurchases)}</p>
+          <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Approvisionnement</p>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Achats</h1>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 bg-accent text-accent-foreground px-3 py-2 rounded-lg text-xs font-medium active:scale-95 transition-transform"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Nouveau
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { setIsRetour(true); setShowForm(true); }}
+            className="h-12 w-12 bg-red-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-red-500/30 active:scale-90 transition-transform"
+          >
+            <RotateCcw className="w-6 h-6" />
+          </button>
+          <button
+            onClick={() => { setIsRetour(false); setShowForm(true); }}
+            className="h-12 w-12 bg-primary text-white rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30 active:scale-90 transition-transform"
+          >
+            <Plus className="w-6 h-6" />
+          </button>
+        </div>
       </motion.div>
 
-      {/* New Purchase Form */}
-      <AnimatePresence>
-        {showForm && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="glass-card p-4 space-y-4">
-              {/* Header */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ShoppingBag className="w-4 h-4 text-accent" />
-                  <h3 className="text-xs font-semibold">Nouveau bon d'achat</h3>
+      {createPortal(
+        <AnimatePresence>
+          {showForm && (
+            <motion.div
+              initial={{ opacity: 0, y: '100%' }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-0 z-[100] bg-[#F9FBFF] flex flex-col"
+            >
+              <div className="h-20 px-6 border-b border-slate-100 flex items-center justify-between shrink-0 safe-area-top bg-white">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isRetour ? 'bg-red-500/10' : 'bg-primary/10'}`}>
+                    <ShoppingBag className={`w-5 h-5 ${isRetour ? 'text-red-500' : 'text-primary'}`} />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black">{isRetour ? 'Nouveau retour' : 'Nouvel achat'}</h3>
+                    <p className={`text-[10px] font-bold uppercase tracking-widest ${isRetour ? 'text-red-500' : 'text-primary'}`}>{isRetour ? 'Sortie de stock' : 'Entrée de stock'}</p>
+                  </div>
                 </div>
-                <button onClick={resetForm} className="text-muted-foreground active:scale-90 transition-transform">
-                  <X className="w-4 h-4" />
+                <button onClick={resetForm} className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center active:scale-90 transition-transform">
+                  <X className="w-5 h-5 text-slate-500" />
                 </button>
               </div>
 
-              {/* Supplier */}
-              <div>
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1.5 block">Fournisseur</label>
-                <div className="relative">
-                  <select
-                    value={supplier}
-                    onChange={e => setSupplier(e.target.value)}
-                    className="input-field w-full h-10"
-                  >
-                    <option value="">Sélectionner un fournisseur...</option>
-                    {suppliersState.map(s => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
+              <div className="flex-1 overflow-y-auto p-6 space-y-8 pb-32">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between px-1">
+                    <label className="text-[11px] text-slate-400 font-black uppercase tracking-wider">Fournisseur</label>
+                    {!showAddSupplier && (
+                      <button onClick={() => setShowAddSupplier(true)} className="text-[10px] font-black text-primary uppercase underline underline-offset-4 tracking-widest">Nouveau</button>
+                    )}
+                  </div>
+                  {showAddSupplier ? (
+                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="premium-card p-4 space-y-4 border-primary/20">
+                      <input type="text" placeholder="Nom du fournisseur" value={newSupplierName} onChange={e => setNewSupplierName(e.target.value)} className="w-full h-12 bg-slate-50 border-none rounded-xl px-4 text-sm font-bold" />
+                      <div className="flex gap-2">
+                        <button onClick={addNewSupplier} className="flex-1 h-10 bg-primary text-white rounded-xl text-[10px] font-black uppercase">Créer</button>
+                        <button onClick={() => setShowAddSupplier(false)} className="flex-1 h-10 bg-slate-100 text-slate-400 rounded-xl text-[10px] font-black uppercase">Annuler</button>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <select value={supplier} onChange={e => setSupplier(e.target.value)} className="w-full h-14 bg-white border-2 border-slate-50 rounded-[1.25rem] px-5 text-base font-semibold focus:border-primary/20 focus:ring-0 transition-all shadow-sm appearance-none">
+                      <option value="">Choisir fournisseur...</option>
+                      {suppliersState.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between px-1">
+                    <label className="text-[11px] text-slate-400 font-black uppercase tracking-wider">Articles commandés</label>
+                    <span className="text-[10px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-full">{lines.length} LIGNES</span>
+                  </div>
+
+                  <div className="space-y-6">
+                    {lines.map((line, i) => (
+                      <motion.div layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} key={i} className="premium-card p-4 relative border-l-4 border-l-primary">
+                        <div className="space-y-4">
+                          <select value={line.productId} onChange={e => updateLine(i, 'productId', e.target.value)} className="w-full h-12 bg-slate-50 border-none rounded-xl px-4 text-sm font-bold appearance-none">
+                            <option value="">Sélectionner produit...</option>
+                            {stocksState.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                          {line.productId && (
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1.5">
+                                <label className="text-[10px] text-slate-400 font-black uppercase ml-1">Qté (kg)</label>
+                                <input type="number" value={line.quantity || ''} onChange={e => updateLine(i, 'quantity', Number(e.target.value))} className="w-full h-12 bg-slate-50 border-none rounded-xl px-4 text-sm font-black" />
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-[10px] text-slate-400 font-black uppercase ml-1">P.U (DA)</label>
+                                <input type="number" value={line.unitPrice || ''} onChange={e => updateLine(i, 'unitPrice', Number(e.target.value))} className="w-full h-12 bg-slate-50 border-none rounded-xl px-4 text-sm font-black" />
+                              </div>
+                              <div className="col-span-2 pt-3 flex items-center justify-between border-t border-slate-50 mt-1">
+                                <span className="text-[10px] text-slate-400 font-black uppercase">Total ligne</span>
+                                <span className="text-sm font-black text-primary">{formatDA(line.total)}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        {lines.length > 1 && (
+                          <button onClick={() => removeLine(i)} className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-slate-900 text-white shadow-xl flex items-center justify-center active:scale-90 transition-transform">
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </motion.div>
                     ))}
-                  </select>
-                  <button
-                    onClick={() => setShowAddSupplier(true)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-accent hover:underline"
-                  >
-                    + Nouveau
+                  </div>
+
+                  <button onClick={addLine} className="w-full h-16 rounded-[1.5rem] border-2 border-dashed border-slate-200 text-xs text-slate-400 font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all hover:bg-slate-50">
+                    <Plus className="w-4 h-4" /> Ajouter un produit
                   </button>
                 </div>
               </div>
 
-              {/* Add New Supplier Inline */}
-              {showAddSupplier && (
-                <div className="pt-2 pb-3 border-t border-border/60">
-                  <input
-                    type="text"
-                    placeholder="Nom du nouveau fournisseur"
-                    value={newSupplierName}
-                    onChange={e => setNewSupplierName(e.target.value)}
-                    className="input-field w-full text-sm pr-20"
-                  />
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      onClick={addNewSupplier}
-                      disabled={!newSupplierName.trim()}
-                      className="flex-1 bg-accent text-accent-foreground py-1.5 px-3 rounded-lg text-xs font-medium active:scale-95 disabled:opacity-50"
-                    >
-                      Ajouter
-                    </button>
-                    <button
-                      onClick={() => setShowAddSupplier(false)}
-                      className="flex-1 text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg border active:scale-95"
-                    >
-                      Annuler
-                    </button>
+              <div className="p-6 bg-white border-t border-slate-100 shrink-0 safe-area-bottom shadow-[0_-10px_40px_rgba(0,0,0,0.02)]">
+                {grandTotal > 0 && (
+                  <div className="flex items-center justify-between mb-4 px-2">
+                    <span className="text-xs text-slate-400 font-black uppercase tracking-widest">DÉPENSE TOTALE</span>
+                    <span className="text-2xl font-black text-slate-900 tracking-tighter">{formatDA(grandTotal)}</span>
                   </div>
-                </div>
-              )}
-
-              {/* Line Items */}
-              <div className="space-y-3">
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium block">Produits</label>
-                {lines.map((line, i) => (
-                  <div key={i} className="flex gap-2 items-start">
-                    <div className="flex-1 space-y-2">
-                      <select
-                        value={line.productId}
-                        onChange={e => updateLine(i, 'productId', e.target.value)}
-                        className="input-field w-full h-10 text-xs"
-                      >
-                        <option value="">Produit...</option>
-                        {stocksState.map(p => (
-                          <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                      </select>
-                      {line.productId && (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                          <div className="md:col-span-1">
-                            <label className="text-[10px] text-muted-foreground mb-1 block">Quantité (kg)</label>
-                            <input
-                              type="number"
-                              min="1"
-                              value={line.quantity || ''}
-                              onChange={e => updateLine(i, 'quantity', e.target.value)}
-                              className="input-field w-full h-9 text-sm"
-                            />
-                          </div>
-                          <div className="md:col-span-1">
-                            <label className="text-[10px] text-muted-foreground mb-1 block">Prix unitaire</label>
-                            <input
-                              type="number"
-                              min="0"
-                              step="1000"
-                              value={line.unitPrice || ''}
-                              onChange={e => updateLine(i, 'unitPrice', e.target.value)}
-                              className="input-field w-full h-9 text-sm"
-                              placeholder="DA"
-                            />
-                          </div>
-                          <div className="md:col-span-1">
-                            <label className="text-[10px] text-muted-foreground mb-1 block">Sous-total</label>
-                            <div className="input-field h-9 flex items-center text-xs font-semibold text-accent bg-accent/5">
-                              {formatDA(line.total)}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    {lines.length > 1 && (
-                      <button
-                        onClick={() => removeLine(i)}
-                        className="mt-1.5 p-2 rounded-lg bg-destructive/10 text-destructive active:scale-90 transition-transform shrink-0"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                ))}
+                )}
                 <button
-                  onClick={addLine}
-                  className="w-full py-2 rounded-lg border border-dashed border-border text-xs text-muted-foreground font-medium flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform hover:border-accent/40 hover:text-foreground"
+                  onClick={handleSubmit}
+                  disabled={!canSubmit}
+                  className={`w-full h-16 text-white rounded-[1.5rem] text-sm font-black flex items-center justify-center gap-3 active:scale-[0.98] transition-all shadow-xl disabled:opacity-40 ${isRetour ? 'bg-red-500 shadow-red-500/20' : 'bg-primary shadow-primary/20'}`}
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  Ajouter un produit
+                  <Check className="w-5 h-5" /> {isRetour ? 'VALIDER LE RETOUR' : "VALIDER L'ACHAT"}
                 </button>
               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
-              {/* Total */}
-              {grandTotal > 0 && (
-                <div className="flex items-center justify-between pt-3 border-t border-border/60">
-                  <span className="text-xs text-muted-foreground font-medium">Total</span>
-                  <span className="text-base font-bold text-accent">{formatDA(grandTotal)}</span>
-                </div>
-              )}
-
-              {/* Submit */}
-              <button
-                onClick={handleSubmit}
-                disabled={!canSubmit}
-                className="w-full bg-accent text-accent-foreground py-2.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform disabled:opacity-40"
-              >
-                <Check className="w-4 h-4" />
-                Enregistrer le bon d'achat
-              </button>
+      <div className="space-y-8">
+        {Object.entries(grouped).sort(([a], [b]) => b.localeCompare(a)).map(([date, dayPurchases]) => (
+          <motion.div key={date} variants={item} className="space-y-4">
+            <div className="flex items-center gap-3 px-1">
+              <div className="h-0.5 flex-1 bg-slate-100" />
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}</span>
+              <div className="h-0.5 flex-1 bg-slate-100" />
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Purchases List */}
-      {Object.entries(grouped)
-        .sort(([a], [b]) => b.localeCompare(a))
-        .map(([date, dayPurchases]) => (
-          <motion.div key={date} variants={item} className="space-y-2">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Calendar className="w-3.5 h-3.5" />
-              <span className="font-medium">
-                {new Date(date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
-              </span>
-              <span className="text-[10px]">({dayPurchases.length})</span>
-            </div>
-            <div className="space-y-2">
+            <div className="space-y-4">
               {dayPurchases.map(purchase => (
-                <div key={purchase.id} className="glass-card p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center shrink-0">
-                      <ShoppingBag className="w-3.5 h-3.5 text-accent" strokeWidth={2} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-semibold text-accent">{purchase.id}</span>
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${purchase.status === 'completed' ? 'bg-green-50 text-green-700' : 'bg-destructive/10 text-destructive'}`}>
-                          {purchase.status === 'completed' ? 'Complété' : 'En attente'}
-                        </span>
+                <motion.div key={purchase.id} whileTap={{ scale: 0.98 }} className="premium-card">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center"><ShoppingBag className="w-4 h-4 text-slate-400" /></div>
+                      <div>
+                        <span className="text-[10px] font-black text-primary uppercase tracking-widest">#{purchase.id}</span>
+                        <h3 className="text-sm font-black text-slate-900 -mt-0.5">{purchase.supplier_name}</h3>
                       </div>
-                      <p className="text-[11px] text-muted-foreground truncate">{purchase.supplier_name}</p>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-xs font-bold">{formatDA(purchase.total)}</p>
-                      <button 
-                        onClick={() => navigate(`/achat/${purchase.id}`)} 
-                        className="text-muted-foreground hover:text-accent mt-1 active:scale-95 transition-all cursor-pointer"
-                        title="Voir détails"
-                      >
-                        <FileText className="w-3.5 h-3.5" />
-                      </button>
+                    <div className="text-right flex flex-col items-end gap-1.5 mt-1">
+                      <p className="text-sm font-black text-slate-900 leading-none">{formatDA(purchase.total)}</p>
+                      {purchase.status === 'returned' ? (
+                        <span className="text-[9px] font-black uppercase text-red-500 bg-red-50 px-2.5 py-1 rounded-full tracking-wider mt-1">Retourné</span>
+                      ) : (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); returnPurchase(purchase.id); }}
+                          className="text-[9px] font-black uppercase text-white bg-red-500 hover:bg-red-600 active:scale-95 px-3 py-1 rounded-full tracking-wider transition-all shadow-sm shadow-red-500/20 mt-1"
+                        >
+                          Retourner
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <div className="mt-2 pt-2 border-t border-border/50">
+                  <div className="space-y-2 border-t border-slate-50 pt-3">
                     {purchase.products.map((p, i) => (
-                      <p key={i} className="text-[11px] text-muted-foreground">
-                        {p.product_name} × {p.quantity} kg — {formatDA(p.total)}
-                      </p>
+                      <div key={i} className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-500 font-medium">{p.product_name} × {p.quantity} kg</span>
+                        <span className="text-slate-900 font-bold">{formatDA(p.total)}</span>
+                      </div>
                     ))}
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </motion.div>
         ))}
+      </div>
     </motion.div>
   );
 };
 
 export default Achats;
-

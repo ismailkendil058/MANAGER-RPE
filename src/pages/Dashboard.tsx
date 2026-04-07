@@ -50,20 +50,27 @@ const Dashboard = () => {
   ];
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className={`p-1.5 rounded-md bg-surface ${kpi.color}`}>
-                <kpi.icon className="w-3.5 h-3.5" strokeWidth={2} />
-              </div>
-              {kpi.change && (
-                <div className="flex items-center gap-0.5">
-                  <ArrowUpRight className="w-3 h-3 text-success" />
-                  <span className="text-[10px] font-medium text-success">{kpi.change}</span>
-                </div>
-              )}
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
+      <motion.div variants={item} className="px-1">
+        <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Résumé d'activité</p>
+        <h1 className="text-2xl font-black text-slate-900 tracking-tight">Tableau de bord</h1>
+      </motion.div>
+
+      <div className="grid grid-cols-2 gap-4">
+        {kpis.map((kpi, idx) => (
+          <motion.div key={idx} variants={item} whileTap={{ scale: 0.98 }} className="premium-card relative overflow-hidden group">
+            <div className={`w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center mb-4 ${kpi.color}`}>
+              <kpi.icon className="w-5 h-5" />
             </div>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{kpi.title}</p>
-            <p className="text-base font-bold tracking-tight mt-0.5">{kpi.value}</p>
+            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{kpi.title}</p>
+            <p className="text-lg font-black text-slate-900 mt-1 tracking-tighter">{kpi.value}</p>
+            {kpi.change && (
+              <div className="absolute top-4 right-4 flex items-center gap-0.5 bg-green-50 px-2 py-0.5 rounded-full">
+                <ArrowUpRight className="w-2.5 h-2.5 text-green-600" />
+                <span className="text-[9px] font-black text-green-600">{kpi.change}</span>
+              </div>
+            )}
+            <div className="absolute right-0 bottom-0 w-8 h-8 bg-slate-50 rounded-tl-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
           </motion.div>
         ))}
       </div>
@@ -97,17 +104,17 @@ const Dashboard = () => {
 
 
 
-      {/* Recent Sales */}
-      <motion.div variants={item} className="glass-card overflow-hidden">
-        <div className="p-4 border-b border-border flex items-center justify-between">
+      {/* Recent Activity List */}
+      <motion.div variants={item} className="space-y-4">
+        <div className="flex items-end justify-between px-1">
           <div>
-            <h3 className="text-xs font-semibold">Ventes récentes</h3>
-            <p className="text-[9px] text-muted-foreground/60" dir="rtl">المبيعات الأخيرة</p>
+            <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Activité</p>
+            <h3 className="text-sm font-black text-slate-900 tracking-tight">Ventes récentes</h3>
           </div>
           <Popover>
             <PopoverTrigger asChild>
-              <button className="flex items-center gap-1.5 text-[11px] text-muted-foreground bg-surface px-2.5 py-1.5 rounded-lg active:scale-95 transition-transform">
-                <CalendarIcon className="w-3.5 h-3.5" />
+              <button className="h-8 px-3 flex items-center gap-2 bg-slate-50 rounded-xl text-[10px] font-black text-slate-500 uppercase tracking-widest active:scale-95 transition-transform">
+                <CalendarIcon className="w-3.5 h-3.5" strokeWidth={3} />
                 {selectedDate ? format(selectedDate, 'dd MMM', { locale: fr }) : 'Tout'}
               </button>
             </PopoverTrigger>
@@ -122,29 +129,33 @@ const Dashboard = () => {
             </PopoverContent>
           </Popover>
         </div>
+
         {filteredSales.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-            <ShoppingCart className="w-6 h-6 mb-1.5 opacity-40" />
-            <p className="text-[11px] font-medium">Aucune vente ce jour</p>
+          <div className="flex flex-col items-center justify-center p-12 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100">
+            <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mb-4">
+              <ShoppingCart className="w-6 h-6 text-slate-200" />
+            </div>
+            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Aucune activité<br />enregistrée</p>
           </div>
         ) : (
-          <div className="divide-y divide-border/50">
+          <div className="space-y-3">
             {filteredSales.map(sale => (
-              <div key={sale.id} className="p-4 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center shrink-0">
-                  <ShoppingCart className="w-3.5 h-3.5 text-accent" strokeWidth={2} />
+              <motion.div key={sale.id} whileTap={{ scale: 0.98 }} className="premium-card p-4 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100">
+                  <ShoppingCart className="w-4 h-4 text-slate-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-semibold text-accent">{sale.id}</span>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${sale.status === 'completed' ? 'bg-green-50 text-green-700' : 'bg-destructive/10 text-destructive'}`}>
-                      {sale.status === 'completed' ? '✓' : '⏳'}
-                    </span>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-[10px] font-black text-primary uppercase tracking-widest">#{sale.id}</span>
+                    <span className={`w-1.5 h-1.5 rounded-full ${sale.status === 'completed' ? 'bg-green-500' : 'bg-amber-400'}`} />
                   </div>
-                  <p className="text-[11px] text-muted-foreground truncate">{sale.client}</p>
+                  <h3 className="text-sm font-black text-slate-900 truncate tracking-tight">{sale.client_name}</h3>
                 </div>
-                <p className="text-xs font-bold whitespace-nowrap">{formatDA(sale.total)}</p>
-              </div>
+                <div className="text-right">
+                  <p className="text-sm font-black text-slate-900 tracking-tighter">{formatDA(sale.total)}</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mt-1">{sale.status === 'completed' ? 'Terminé' : 'Attente'}</p>
+                </div>
+              </motion.div>
             ))}
           </div>
         )}

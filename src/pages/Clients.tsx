@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, MapPin, Plus, X, ChevronRight, ShoppingCart, ArrowLeft, UserPlus } from 'lucide-react';
 import { formatDA } from '@/data/mock-data';
@@ -9,7 +10,7 @@ const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } 
 const item = { hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.2 } } };
 
 const Clients = () => {
-const { clientsState: clientList, loading: clientsLoading, fetchClients, addClient } = useClients();
+  const { clientsState: clientList, loading: clientsLoading, fetchClients, addClient } = useClients();
   const { salesState: sharedSales, loading: salesLoading, fetchSales } = useSales();
   const [showForm, setShowForm] = useState(false);
   const [selectedClient, setSelectedClient] = useState<any | null>(null);
@@ -114,109 +115,151 @@ const { clientsState: clientList, loading: clientsLoading, fetchClients, addClie
   }
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-4">
-      <motion.div variants={item} className="flex items-start justify-between">
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
+      <motion.div variants={item} className="flex items-end justify-between px-1">
         <div>
-          <h1 className="text-lg font-bold">Clients</h1>
-          <p className="text-xs text-muted-foreground">العملاء — {clientList.length} clients</p>
+          <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Base de données</p>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Clients</h1>
         </div>
         <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 bg-accent text-accent-foreground px-3 py-2 rounded-lg text-xs font-medium active:scale-95 transition-transform"
+          onClick={() => { setShowForm(true); setForm({ name: '', phone: '', address: '' }); }}
+          className="h-12 w-12 bg-primary text-white rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30 active:scale-90 transition-transform"
         >
-          <Plus className="w-3.5 h-3.5" />
-          Nouveau
+          <Plus className="w-6 h-6" />
         </button>
       </motion.div>
 
-      {/* Add Client Form */}
-      <AnimatePresence>
-        {showForm && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="glass-card p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <UserPlus className="w-4 h-4 text-accent" />
-                  <h3 className="text-xs font-semibold">Nouveau client</h3>
+      {/* New Client Form Overlay */}
+      {createPortal(
+        <AnimatePresence>
+          {showForm && (
+            <motion.div
+              initial={{ opacity: 0, y: '100%' }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-0 z-[100] bg-[#F9FBFF] flex flex-col"
+            >
+              <div className="h-20 px-6 border-b border-slate-100 flex items-center justify-between shrink-0 safe-area-top bg-white">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center">
+                    <UserPlus className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black">Nouveau client</h3>
+                    <p className="text-[10px] text-primary font-bold uppercase tracking-widest">Fiche client</p>
+                  </div>
                 </div>
-                <button onClick={() => setShowForm(false)} className="text-muted-foreground">
-                  <X className="w-4 h-4" />
+                <button
+                  onClick={() => setShowForm(false)}
+                  className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center active:scale-90 transition-transform"
+                >
+                  <X className="w-5 h-5 text-slate-500" />
                 </button>
               </div>
-              <input
-                type="text"
-                placeholder="Nom du client"
-                value={form.name}
-                onChange={e => setForm({ ...form, name: e.target.value })}
-                className="input-field w-full h-10"
-              />
-              <input
-                type="tel"
-                placeholder="Téléphone"
-                value={form.phone}
-                onChange={e => setForm({ ...form, phone: e.target.value })}
-                className="input-field w-full h-10"
-              />
-              <input
-                type="text"
-                placeholder="Adresse"
-                value={form.address}
-                onChange={e => setForm({ ...form, address: e.target.value })}
-                className="input-field w-full h-10"
-              />
-              <button
-                onClick={handleAdd}
-                disabled={!form.name.trim()}
-                className="w-full bg-accent text-accent-foreground py-2.5 rounded-lg text-xs font-semibold active:scale-[0.98] transition-transform disabled:opacity-40"
-              >
-                Ajouter le client
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
-      <div className="space-y-3">
+              <div className="flex-1 overflow-y-auto p-6 space-y-8 pb-32">
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[11px] text-slate-400 font-black uppercase tracking-wider ml-1">Nom Complet</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Ahmed Benali"
+                      value={form.name}
+                      onChange={e => setForm({ ...form, name: e.target.value })}
+                      className="w-full h-14 bg-white border-2 border-slate-100 rounded-[1.25rem] px-5 text-base font-semibold focus:border-primary/20 focus:ring-0 transition-all shadow-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[11px] text-slate-400 font-black uppercase tracking-wider ml-1">Téléphone</label>
+                    <input
+                      type="tel"
+                      placeholder="05XXXXXXXX"
+                      value={form.phone}
+                      onChange={e => setForm({ ...form, phone: e.target.value })}
+                      className="w-full h-14 bg-white border-2 border-slate-100 rounded-[1.25rem] px-5 text-base font-semibold focus:border-primary/20 focus:ring-0 transition-all shadow-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[11px] text-slate-400 font-black uppercase tracking-wider ml-1">Adresse</label>
+                    <textarea
+                      rows={3}
+                      placeholder="Cité ... Wilaya ..."
+                      value={form.address}
+                      onChange={e => setForm({ ...form, address: e.target.value })}
+                      className="w-full bg-white border-2 border-slate-100 rounded-[1.25rem] p-5 text-base font-semibold focus:border-primary/20 focus:ring-0 transition-all shadow-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 bg-white border-t border-slate-100 shrink-0 safe-area-bottom shadow-[0_-10px_40px_rgba(0,0,0,0.02)]">
+                <button
+                  onClick={handleAdd}
+                  disabled={!form.name.trim()}
+                  className="w-full h-16 bg-primary text-white rounded-[1.5rem] text-sm font-black flex items-center justify-center gap-3 active:scale-[0.98] transition-all disabled:opacity-40 shadow-xl shadow-primary/20"
+                >
+                  <Plus className="w-5 h-5" />
+                  CRÉER LE COMPTE
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
+      {/* Clients List */}
+      <div className="space-y-4">
         {clientList.map(client => (
           <motion.div
             key={client.id}
             variants={item}
-            className="glass-card p-4 active:scale-[0.98] transition-transform cursor-pointer"
             onClick={() => setSelectedClient(client)}
+            className="premium-card group relative overflow-hidden active:scale-95 cursor-pointer"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center text-sm font-bold text-accent shrink-0">
-                {client.name.charAt(0)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-semibold truncate">{client.name}</h3>
-                <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted-foreground">
-                  <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{client.phone}</span>
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-[1.25rem] bg-slate-50 flex items-center justify-center border border-slate-100">
+                  <span className="text-sm font-black text-slate-400">{client.name.substring(0, 2).toUpperCase()}</span>
                 </div>
-                <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <MapPin className="w-3 h-3" />{client.address}
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 tracking-tight">{client.name}</h3>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <Phone className="w-3 h-3 text-primary" />
+                    <span className="text-[11px] text-slate-500 font-medium">{client.phone}</span>
+                  </div>
                 </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground/40 shrink-0" />
-            </div>
-            <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/50">
-              <div>
-                <p className="text-[10px] text-muted-foreground">Dépensé</p>
-                <p className="text-xs font-bold">{formatDA(client.total_spent)}</p>
               </div>
               <div className="text-right">
-                <p className="text-[10px] text-muted-foreground">Commandes</p>
-                <p className="text-xs font-bold">{sharedSales.filter(s => s.client_name === client.name).length}</p>
+                <p className="text-xs font-black text-slate-400 uppercase tracking-tighter">Solde</p>
+                <p className="text-sm font-black text-primary tracking-tighter">{formatDA(client.total_spent || 0)}</p>
               </div>
             </div>
+
+            {client.address && (
+              <div className="flex items-start gap-1.5 py-3 border-t border-slate-50">
+                <MapPin className="w-3 h-3 text-slate-300 mt-0.5" />
+                <p className="text-[10px] text-slate-400 font-medium line-clamp-1">{client.address}</p>
+              </div>
+            )}
+
+            <div className="absolute right-0 top-0 bottom-0 w-1 bg-primary/5 group-hover:bg-primary transition-colors" />
           </motion.div>
         ))}
       </div>
+
+      {clientList.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-20 text-slate-300">
+          <div className="w-20 h-20 rounded-[2.5rem] bg-white shadow-sm flex items-center justify-center mb-6">
+            <UserPlus className="w-8 h-8 opacity-20" />
+          </div>
+          <p className="text-sm font-black tracking-tight text-slate-400">Aucun client enregistré</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest mt-2 opacity-50">Votre liste est vide</p>
+        </div>
+      )}
     </motion.div>
   );
 };

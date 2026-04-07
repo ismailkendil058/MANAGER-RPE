@@ -18,7 +18,7 @@ export interface Sale {
   client_name: string;
   products: SaleLineItem[];
   total: number;
-  status: 'completed' | 'pending';
+  status: 'completed' | 'pending' | 'returned';
 }
 
 export const useSales = () => {
@@ -93,9 +93,10 @@ export const useSales = () => {
           .single();
 
         const currentQuantity = currentProduct?.quantity || 0;
-        const newQuantity = currentQuantity - item.quantity;
+        const quantityChange = sale.status === 'returned' ? item.quantity : -item.quantity;
+        const newQuantity = Math.max(0, currentQuantity + quantityChange);
 
-        if (newQuantity < 0) {
+        if (newQuantity < 0 && sale.status !== 'returned') {
           console.warn(`Insufficient stock for product ${item.product_id}: ${currentQuantity} - ${item.quantity} = ${newQuantity}`);
         }
 
@@ -113,8 +114,43 @@ export const useSales = () => {
     return newSale;
   };
 
+  const returnSale = async (saleId: string) => {
+    const sale = salesState.find(s => s.id === saleId);
+    if (!sale || sale.status === 'returned') return;
 
-  return { salesState, loading, fetchSales, addSale };
+    // 1. Update status to returned
+    const { error: saleError } = await supabase
+      .from('sales')
+      .update({ status: 'returned' })
+      .eq('id', saleId);
+
+    if (saleError) throw saleError;
+
+    // 2. Add quantity back to stock
+    for (const item of sale.products) {
+      try {
+        const { data: currentProduct } = await supabase
+          .from('products')
+          .select('quantity')
+          .eq('id', item.product_id)
+          .single();
+
+        const currentQuantity = currentProduct?.quantity || 0;
+        const newQuantity = currentQuantity + item.quantity;
+
+        await supabase
+          .from('products')
+          .update({ quantity: newQuantity })
+          .eq('id', item.product_id);
+      } catch (stockError) {
+        console.error(`Failed to restock product ${item.product_id}:`, stockError);
+      }
+    }
+
+    await fetchSales();
+  };
+
+  return { salesState, loading, fetchSales, addSale, returnSale };
 };
 
 

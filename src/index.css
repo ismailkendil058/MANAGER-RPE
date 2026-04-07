@@ -6,35 +6,35 @@
 
 @layer base {
   :root {
-    --background: 210 40% 99%;
-    --foreground: 222 47% 11%;
+    --background: 0 0% 100%;
+    --foreground: 224 71.4% 4.1%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 224 71.4% 4.1%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 224 71.4% 4.1%;
 
-    --primary: 224 76% 33%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
 
-    --muted: 210 40% 97%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 221 83% 53%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 221.2 83.2% 53.3%;
+    --accent-foreground: 222.2 47.4% 11.2%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 224 76% 33%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
 
-    --radius: 0.5rem;
+    --radius: 1.25rem;
 
     --sidebar-background: 224 76% 33%;
     --sidebar-foreground: 210 40% 96%;
@@ -58,68 +58,62 @@
 @layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent;
   }
 
   html {
-    -webkit-tap-highlight-color: transparent;
     -webkit-text-size-adjust: 100%;
     -ms-text-size-adjust: 100%;
     text-size-adjust: 100%;
     -webkit-touch-callout: none;
-    touch-action: pan-y;
+    -webkit-user-select: none;
+    user-select: none;
     overscroll-behavior: none;
-    min-height: 100%;
     height: 100%;
-    overflow: auto;
+    overflow: hidden;
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
-    min-height: 100%;
+    @apply bg-[#F9FBFF] text-foreground font-sans antialiased;
     height: 100%;
     width: 100%;
-    overflow: auto;
-    touch-action: pan-y;
-    overscroll-behavior: contain;
-    position: static;
+    overscroll-behavior: none;
+    position: fixed;
+    overflow: hidden;
   }
 
   #root {
-    min-height: 100%;
     height: 100%;
     width: 100%;
-    overflow: auto;
+    overflow: hidden;
+  }
+
+  /* Allow text selection in inputs */
+  input,
+  textarea,
+  [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
   }
 
   input,
   textarea,
   select {
     font-size: 16px !important;
-    -webkit-appearance: none;
-    appearance: none;
-    -webkit-user-select: text;
-    user-select: text;
+    @apply bg-card border-none rounded-2xl px-4 py-3;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  input:focus,
+  textarea:focus {
+    @apply ring-2 ring-primary/20 outline-none;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+  }
+
+  button {
+    @apply active:scale-[0.97] transition-all duration-200 ease-out;
     touch-action: manipulation;
-    pointer-events: auto;
-  }
-
-  .input-field {
-    @apply bg-surface border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all duration-150;
-    min-height: 2.5rem;
-    font-size: 16px;
-  }
-
-  input, textarea, select {
-    font-size: 16px !important;
-    -webkit-user-select: text;
-    user-select: text;
-    -webkit-appearance: none;
-    appearance: none;
-  }
-
-  input, textarea {
-    border-radius: 8px;
-    padding: 8px;
   }
 
   h1,
@@ -128,49 +122,23 @@
   h4,
   h5,
   h6 {
-    @apply font-semibold tracking-tight;
+    @apply font-bold tracking-tight text-slate-900;
   }
 }
 
 @layer utilities {
-  .glass-card {
-    @apply bg-card border border-border/60 rounded-xl;
+  .premium-card {
+    @apply bg-white border border-slate-100/50 rounded-[2rem] p-5 transition-all duration-300;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
   }
 
-  .kpi-card {
-    @apply glass-card p-6 transition-all duration-200 hover:border-accent/30 hover:shadow-sm;
-  }
-
-  .sidebar-link {
-    @apply flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-150;
-  }
-
-  .sidebar-link-active {
-    @apply bg-sidebar-accent text-sidebar-accent-foreground;
-  }
-
-  .sidebar-link-inactive {
-    @apply text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50;
-  }
-
-  .table-header {
-    @apply text-xs font-semibold uppercase tracking-wider text-muted-foreground;
-  }
-
-  .table-row-hover {
-    @apply hover:bg-surface transition-colors duration-100;
-  }
-
-  .badge-stock-low {
-    @apply bg-destructive/10 text-destructive text-xs font-medium px-2 py-0.5 rounded-full;
-  }
-
-  .badge-stock-ok {
-    @apply bg-green-50 text-green-700 text-xs font-medium px-2 py-0.5 rounded-full;
+  .premium-card:active {
+    @apply scale-[0.99];
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
   }
 
   .input-field {
-    @apply bg-surface border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all duration-150;
+    @apply bg-white border border-slate-100 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all duration-300;
   }
 
   .scrollbar-hide {
@@ -183,10 +151,19 @@
   }
 
   .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: env(safe-area-inset-bottom, 20px);
   }
 
   .safe-area-top {
-    padding-top: env(safe-area-inset-top);
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  header {
+    padding-top: env(safe-area-inset-top, 0px);
+    height: calc(3.5rem + env(safe-area-inset-top, 0px));
+  }
+
+  main {
+    margin-top: calc(3.5rem + env(safe-area-inset-top, 0px));
   }
 }
