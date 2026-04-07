@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useEffect, useState } from 'react';
 // @ts-ignore
 import { getAllTableRecords, saveLocally } from '../local-first/storage.js';
+import { sales as mockSales } from './mock-data';
+import { persistLocalProductQuantity } from '@/local-first/product-cache';
 
 export interface SaleLineItem {
   id?: number;
@@ -23,258 +24,95 @@ export interface Sale {
   status: 'completed' | 'pending' | 'returned';
 }
 
-type ProductFallback = {
-  name?: string;
-  product_name?: string;
-  price?: number;
-  supplier?: string;
-};
+const sortByDateDesc = (items: Sale[]) =>
+  [...items].sort((a, b) => b.date.localeCompare(a.date));
 
-const mergeLocalProductRecord = (
-  productId: string,
-  quantity: number,
-  fallback: ProductFallback,
-  existing?: Record<string, any>
-) => {
-  const record: Record<string, any> = { ...(existing ?? {}) };
-  record.id = existing?.id ?? productId;
-  if (!record.name && fallback.name) record.name = fallback.name;
-  if (!record.product_name && fallback.product_name) record.product_name = fallback.product_name;
-  if (fallback.price !== undefined && record.price === undefined) record.price = fallback.price;
-  if (fallback.supplier && !record.supplier) record.supplier = fallback.supplier;
-  record.quantity = quantity;
-  return record;
-};
+const normalizeSeed = mockSales.map(sale => ({
+  id: sale.id,
+  date: sale.date,
+  client_id: null,
+  client_name: sale.client,
+  products: sale.products,
+  total: sale.total,
+  status: (sale.status as Sale['status']) ?? 'completed',
+}));
 
-const persistLocalProductQuantity = async (
-  productId: string,
-  quantity: number,
-  fallback: ProductFallback,
-  localProducts: Record<string, any>[]
-) => {
-  const existing = localProducts.find(p => p.id === productId);
-  const payload = mergeLocalProductRecord(productId, quantity, fallback, existing);
-  await saveLocally('products', productId, payload, 'update');
+const persistStockImpact = async (products: SaleLineItem[], status: Sale['status']) => {
+  const cachedProducts = await getAllTableRecords('products');
+  for (const item of products) {
+    const existing = cachedProducts.find((p: any) => p.id === item.product_id);
+    const currentQty = existing?.quantity || 0;
+    const quantityChange = status === 'returned' ? item.quantity : -item.quantity;
+    const newQty = Math.max(0, currentQty + quantityChange);
+    await persistLocalProductQuantity(
+      item.product_id,
+      newQty,
+      { name: item.product_name, product_name: item.product_name, price: item.unit_price },
+      cachedProducts
+    );
+    if (existing) {
+      existing.quantity = newQty;
+    } else {
+      cachedProducts.push({ id: item.product_id, quantity: newQty });
+    }
+  }
 };
 
 export const useSales = () => {
   const [salesState, setSalesState] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
-  const fetchingRef = useRef(false);
 
   const fetchSales = async () => {
-    if (fetchingRef.current) return;
-    fetchingRef.current = true;
     setLoading(true);
+    const cached = await getAllTableRecords('sales');
 
-    if (!navigator.onLine) {
-      const localCache = localStorage.getItem('erp_sales');
-      if (localCache) setSalesState(JSON.parse(localCache));
+    if (cached.length > 0) {
+      const sorted = sortByDateDesc(cached as Sale[]);
+      setSalesState(sorted);
+      localStorage.setItem('erp_sales', JSON.stringify(sorted));
       setLoading(false);
-      fetchingRef.current = false;
       return;
     }
 
-    const { data, error } = await supabase
-      .from('sales')
-      .select('*, sale_items(*)')
-      .order('date', { ascending: false });
-
-    if (error) {
-      console.error('Failed to fetch sales:', error);
-      const cached = localStorage.getItem('erp_sales');
-      if (cached) setSalesState(JSON.parse(cached));
-      setLoading(false);
-      fetchingRef.current = false;
-      return;
-    }
-
-    const formatted = (data ?? []).map((s: any) => ({
-      id: s.id,
-      date: s.date,
-      client_id: s.client_id,
-      client_name: s.client_name,
-      total: s.total,
-      status: s.status,
-      products: (s.sale_items ?? []).map((item: any) => ({
-        id: item.id,
-        sale_id: item.sale_id,
-        product_id: item.product_id,
-        product_name: item.product_name,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        total: item.total,
-      })),
-    }));
-
-    setSalesState(formatted);
-    localStorage.setItem('erp_sales', JSON.stringify(formatted));
+    await Promise.all(normalizeSeed.map(s => saveLocally('sales', s.id, s, 'create')));
+    const sorted = sortByDateDesc(normalizeSeed);
+    setSalesState(sorted);
+    localStorage.setItem('erp_sales', JSON.stringify(sorted));
     setLoading(false);
-    fetchingRef.current = false;
   };
 
   useEffect(() => {
     fetchSales();
-
-    // Refresh when network is restored or SW completes sync
-    const handleOnline = () => setTimeout(fetchSales, 1500);
-    const handleSwSync = () => setTimeout(fetchSales, 500);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('sw-sync-complete', handleSwSync);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('sw-sync-complete', handleSwSync);
-    };
   }, []);
 
   const addSale = async (sale: Omit<Sale, 'id'>) => {
     const saleId = `V-${String(Date.now())}`;
-    const newSale = { ...sale, id: saleId, status: sale.status || 'completed' } as Sale;
+    const newSale: Sale = {
+      ...sale,
+      id: saleId,
+      status: sale.status ?? 'completed',
+      client_id: sale.client_id ?? null,
+    };
 
-    // Optimistic UI update
-    const newState = [newSale, ...salesState];
-    setSalesState(newState);
-    localStorage.setItem('erp_sales', JSON.stringify(newState));
-
-    if (navigator.onLine) {
-      // ── Write directly to Supabase when online ──
-      try {
-        const { error: saleError } = await supabase.from('sales').insert({
-          id: saleId,
-          date: newSale.date,
-          client_id: newSale.client_id,
-          client_name: newSale.client_name,
-          total: newSale.total,
-          status: newSale.status,
-        });
-
-        if (saleError) throw saleError;
-
-        if (newSale.products.length > 0) {
-          const { error: itemsError } = await supabase.from('sale_items').insert(
-            newSale.products.map(item => ({
-              sale_id: saleId,
-              product_id: item.product_id,
-              product_name: item.product_name,
-              quantity: item.quantity,
-              unit_price: item.unit_price,
-              total: item.total,
-            }))
-          );
-          if (itemsError) console.error('Error inserting sale items:', itemsError);
-        }
-
-        // Update stock in Supabase
-        for (const item of newSale.products) {
-          try {
-            const { data: productData } = await supabase
-              .from('products').select('quantity').eq('id', item.product_id).single();
-
-            const currentQty = productData?.quantity || 0;
-            const quantityChange = newSale.status === 'returned' ? item.quantity : -item.quantity;
-            const newQty = Math.max(0, currentQty + quantityChange);
-
-            await supabase.from('products').update({ quantity: newQty }).eq('id', item.product_id);
-          } catch (stockErr) {
-            console.error(`Stock update failed for ${item.product_id}:`, stockErr);
-          }
-        }
-
-        // Also save locally as synced reference
-        await saveLocally('sales', saleId, {
-          id: saleId, date: newSale.date, client_id: newSale.client_id,
-          client_name: newSale.client_name, total: newSale.total, status: newSale.status
-        }, 'create');
-
-      } catch (err) {
-        console.error('Direct Supabase write failed, falling back to local queue:', err);
-        await _saveToLocalQueue(saleId, newSale);
-      }
-    } else {
-      // ── Offline: save to local queue ──
-      await _saveToLocalQueue(saleId, newSale);
-    }
+    const updatedState = sortByDateDesc([newSale, ...salesState]);
+    setSalesState(updatedState);
+    localStorage.setItem('erp_sales', JSON.stringify(updatedState));
+    await saveLocally('sales', saleId, newSale, 'create');
+    await persistStockImpact(newSale.products, newSale.status);
 
     return newSale;
-  };
-
-  const _saveToLocalQueue = async (saleId: string, newSale: Sale) => {
-    await saveLocally('sales', saleId, {
-      id: saleId, date: newSale.date, client_id: newSale.client_id,
-      client_name: newSale.client_name, total: newSale.total, status: newSale.status
-    }, 'create');
-
-    for (const item of newSale.products) {
-      await saveLocally('sale_items', `item-${Date.now()}-${Math.random()}`, {
-        sale_id: saleId,
-        product_id: item.product_id,
-        product_name: item.product_name,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        total: item.total,
-      }, 'create');
-    }
-
-    // Update local stock
-    const localProducts = await getAllTableRecords('products');
-    for (const item of newSale.products) {
-      const prod = localProducts.find((p: any) => p.id === item.product_id);
-      const currentQty = prod?.quantity || 0;
-      const quantityChange = newSale.status === 'returned' ? item.quantity : -item.quantity;
-      const newQty = Math.max(0, currentQty + quantityChange);
-      await persistLocalProductQuantity(
-        item.product_id,
-        newQty,
-        { name: item.product_name, product_name: item.product_name, price: item.unit_price },
-        localProducts
-      );
-    }
   };
 
   const returnSale = async (saleId: string) => {
     const sale = salesState.find(s => s.id === saleId);
     if (!sale || sale.status === 'returned') return;
 
-    // Optimistic UI update
-    const newState = salesState.map(s =>
-      s.id === saleId ? { ...s, status: 'returned' as const } : s
-    );
-    setSalesState(newState);
-    localStorage.setItem('erp_sales', JSON.stringify(newState));
-
-    if (navigator.onLine) {
-      try {
-        const { error } = await supabase
-          .from('sales').update({ status: 'returned' }).eq('id', saleId);
-        if (error) throw error;
-
-        for (const item of sale.products) {
-          const { data: productData } = await supabase
-            .from('products').select('quantity').eq('id', item.product_id).single();
-          const currentQty = productData?.quantity || 0;
-          const newQty = currentQty + item.quantity;
-          await supabase.from('products').update({ quantity: newQty }).eq('id', item.product_id);
-        }
-      } catch (err) {
-        console.error('Direct return failed, queuing locally:', err);
-        await saveLocally('sales', saleId, { status: 'returned' }, 'update');
-      }
-    } else {
-      await saveLocally('sales', saleId, { status: 'returned' }, 'update');
-      const localProducts = await getAllTableRecords('products');
-      for (const item of sale.products) {
-        const prod = localProducts.find((p: any) => p.id === item.product_id);
-        const currentQty = prod?.quantity || 0;
-        const newQty = currentQty + item.quantity;
-        await persistLocalProductQuantity(
-          item.product_id,
-          newQty,
-          { name: item.product_name, product_name: item.product_name, price: item.unit_price },
-          localProducts
-        );
-      }
-    }
+    const updatedSale = { ...sale, status: 'returned' as const };
+    const updatedState = salesState.map(s => (s.id === saleId ? updatedSale : s));
+    setSalesState(updatedState);
+    localStorage.setItem('erp_sales', JSON.stringify(updatedState));
+    await saveLocally('sales', saleId, updatedSale, 'update');
+    await persistStockImpact(sale.products, 'returned');
   };
 
   return { salesState, loading, fetchSales, addSale, returnSale };
