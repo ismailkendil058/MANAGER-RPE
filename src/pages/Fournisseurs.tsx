@@ -138,8 +138,8 @@ const Fournisseurs = () => {
     // SUPPLIER DETAIL VIEW
     // ════════════════════════════════════════════════════════════
     if (selectedSupplier) {
-        return (
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+    return (
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4 -mt-20">
                 <button
                     onClick={() => setSelectedSupplier(null)}
                     className="flex items-center gap-1.5 text-xs text-muted-foreground active:scale-95 transition-transform"
@@ -353,7 +353,7 @@ const Fournisseurs = () => {
     // SUPPLIERS LIST VIEW
     // ════════════════════════════════════════════════════════════
     return (
-        <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
+        <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 -mt-20">
             <motion.div variants={item} className="flex items-end justify-between px-1">
                 <div>
                     <p className="text-[10px] font-black text-orange-500 uppercase tracking-[0.2em] mb-1">Approvisionnement</p>

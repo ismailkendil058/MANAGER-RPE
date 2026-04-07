@@ -134,7 +134,7 @@ const Achats = () => {
   const canSubmit = supplier && lines.every(l => l.productId && l.quantity > 0);
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 -mt-20">
       <motion.div variants={item} className="flex items-end justify-between px-1">
         <div>
           <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Approvisionnement</p>
