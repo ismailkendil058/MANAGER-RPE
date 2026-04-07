@@ -32,6 +32,8 @@ const Ventes = () => {
   const [lines, setLines] = useState<LineItem[]>([
     { productId: '', productName: '', quantity: 1, unitPrice: 0, total: 0 },
   ]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [returningId, setReturningId] = useState<string | null>(null);
 
   const totalSales = sales.reduce((sum, s) => sum + s.total, 0);
 
@@ -76,7 +78,8 @@ const Ventes = () => {
   };
 
   const handleSubmit = async () => {
-    if (!client.trim() || lines.some(l => !l.productId)) return;
+    if (!client.trim() || lines.some(l => !l.productId) || isSubmitting) return;
+    setIsSubmitting(true);
     const today = new Date().toISOString().split('T')[0];
 
     const clientRecord = clientsList.find(c => c.name === client);
@@ -109,6 +112,21 @@ const Ventes = () => {
       resetForm();
     } catch (error) {
       console.error('Failed to add sale:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleReturn = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (returningId) return;
+    setReturningId(id);
+    try {
+      await returnSale(id);
+    } catch (error) {
+      console.error('Failed to return:', error);
+    } finally {
+      setReturningId(null);
     }
   };
 
@@ -272,8 +290,8 @@ const Ventes = () => {
                 )}
                 <button
                   onClick={handleSubmit}
-                  disabled={!canSubmit}
-                  className={`w-full h-16 text-white rounded-[1.5rem] text-sm font-black flex items-center justify-center gap-3 active:scale-[0.98] transition-all shadow-xl disabled:opacity-40 ${isRetour ? 'bg-red-500 shadow-red-500/20' : 'bg-primary shadow-primary/20'}`}
+                  disabled={!canSubmit || isSubmitting}
+                  className={`w-full h-16 text-white rounded-[1.5rem] text-sm font-black flex items-center justify-center gap-3 active:scale-[0.98] transition-all shadow-xl disabled:opacity-40 disabled:active:scale-100 ${isRetour ? 'bg-red-500 shadow-red-500/20' : 'bg-primary shadow-primary/20'}`}
                 >
                   <Check className="w-5 h-5" />
                   {isRetour ? 'VALIDER LE RETOUR' : 'CONFIRMER LA VENTE'}
@@ -317,10 +335,11 @@ const Ventes = () => {
                           <span className="text-[9px] font-black uppercase text-red-500 bg-red-50 px-2.5 py-1 rounded-full tracking-wider mt-1">Retourné</span>
                         ) : (
                           <button
-                            onClick={(e) => { e.stopPropagation(); returnSale(sale.id); }}
-                            className="text-[9px] font-black uppercase text-white bg-red-500 hover:bg-red-600 active:scale-95 px-3 py-1 rounded-full tracking-wider transition-all shadow-sm shadow-red-500/20 mt-1"
+                            onClick={(e) => handleReturn(e, sale.id)}
+                            disabled={!!returningId}
+                            className="text-[9px] font-black uppercase text-white bg-red-500 hover:bg-red-600 active:scale-95 px-3 py-1 rounded-full tracking-wider transition-all shadow-sm shadow-red-500/20 mt-1 disabled:opacity-50 disabled:active:scale-100"
                           >
-                            Retourner
+                            {returningId === sale.id ? 'Patientez...' : 'Retourner'}
                           </button>
                         )}
                       </div>
