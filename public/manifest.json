@@ -2,11 +2,17 @@
     "name": "Recyclage Pro",
     "short_name": "Recyclage",
     "description": "Gestion de recyclage et stocks",
-    "start_url": "/?source=pwa",
+    "start_url": "/",
+    "scope": "/",
     "display": "standalone",
+    "display_override": [
+        "standalone",
+        "minimal-ui"
+    ],
     "background_color": "#f8fafc",
     "theme_color": "#132b6e",
     "orientation": "portrait",
+    "prefer_related_applications": false,
     "icons": [
         {
             "src": "/Blue app icon design.jpg",

@@ -1,261 +1,320 @@
-const CACHE_NAME = 'recyclage-cache-v1';
-const DATA_CACHE_NAME = 'recyclage-data-cache-v1';
+// ============================================================
+// Service Worker — Offline-First PWA
+// Fixes:
+//  1. iOS Safari "can't open" when offline → Cache-first for app shell
+//  2. Runtime caching of all JS/CSS/image assets after first load
+//  3. IndexedDB queue for offline mutations, flushed on reconnect
+// ============================================================
 
-// App shell assets to pre-cache on install
-// Using specific root paths that represent our core shell
-const APP_SHELL = [
+const CACHE_VERSION = 'v4'; // bump this to force SW update
+const SHELL_CACHE = `app-shell-${CACHE_VERSION}`;
+const RUNTIME_CACHE = `runtime-${CACHE_VERSION}`;
+const DATA_CACHE = `api-data-${CACHE_VERSION}`;
+
+// Core app shell — these MUST be pre-cached so the app loads offline
+const APP_SHELL_URLS = [
     '/',
     '/index.html',
     '/offline.html',
     '/manifest.json',
     '/Blue app icon design.jpg',
-    '/favicon.ico'
 ];
 
-// IndexedDB Helper implementation inside SW to avoid ES Modules in SW context cross-origin issues
-// Since standard imported libraries aren't allowed in standard vanilla SWs easily without bundler setup
-const DB_NAME = 'recyclage-offline-db';
+// ─── IndexedDB helpers (for offline mutation queue) ─────────────────────────
+const DB_NAME = 'sw-sync-queue-db';
 const DB_VERSION = 1;
-const STORE_NAME = 'sync-queue';
+const STORE_NAME = 'queue';
 
 function openDB() {
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = (e) => {
+            const db = e.target.result;
             if (!db.objectStoreNames.contains(STORE_NAME)) {
                 db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
             }
         };
-        request.onsuccess = (event) => resolve(event.target.result);
-        request.onerror = (event) => reject(event.target.error);
+        req.onsuccess = (e) => resolve(e.target.result);
+        req.onerror = (e) => reject(e.target.error);
     });
 }
 
-function getAllSyncData() {
-    return openDB().then(db => {
-        return new Promise((resolve, reject) => {
-            const tx = db.transaction(STORE_NAME, 'readonly');
-            const store = tx.objectStore(STORE_NAME);
-            const request = store.getAll();
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
-        });
-    });
+function dbGetAll() {
+    return openDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const req = tx.objectStore(STORE_NAME).getAll();
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    }));
 }
 
-function saveSyncData(data) {
-    return openDB().then(db => {
-        return new Promise((resolve, reject) => {
-            const tx = db.transaction(STORE_NAME, 'readwrite');
-            const store = tx.objectStore(STORE_NAME);
-            const request = store.add(data);
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
-        });
-    });
+function dbAdd(data) {
+    return openDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const req = tx.objectStore(STORE_NAME).add(data);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    }));
 }
 
-function deleteSyncData(id) {
-    return openDB().then(db => {
-        return new Promise((resolve, reject) => {
-            const tx = db.transaction(STORE_NAME, 'readwrite');
-            const store = tx.objectStore(STORE_NAME);
-            const request = store.delete(id);
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject(request.error);
-        });
-    });
+function dbDelete(id) {
+    return openDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const req = tx.objectStore(STORE_NAME).delete(id);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+    }));
 }
 
-// 1. Installation - Precache App Shell
+// ─── INSTALL — Pre-cache app shell ──────────────────────────────────────────
 self.addEventListener('install', (event) => {
-    // Force immediate activation when installing
+    console.log('[SW] Installing, caching app shell...');
+    // Activate immediately without waiting for old tabs to close
     self.skipWaiting();
 
     event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
-            console.log('[ServiceWorker] Pre-caching app shell');
-            return cache.addAll(APP_SHELL);
+        caches.open(SHELL_CACHE).then(cache => {
+            // addAll will throw if ANY resource fails — use individual adds so
+            // one missing file doesn't break the whole install.
+            return Promise.allSettled(
+                APP_SHELL_URLS.map(url =>
+                    cache.add(new Request(url, { cache: 'reload' }))
+                        .catch(err => console.warn('[SW] Could not pre-cache:', url, err))
+                )
+            );
         })
     );
 });
 
-// 2. Activation - Cleanup old caches
+// ─── ACTIVATE — Clean up old caches ─────────────────────────────────────────
 self.addEventListener('activate', (event) => {
-    // Claim clients immediately
-    event.waitUntil(self.clients.claim());
-
+    console.log('[SW] Activating...');
     event.waitUntil(
-        caches.keys().then((keyList) => {
-            return Promise.all(keyList.map((key) => {
-                if (key !== CACHE_NAME && key !== DATA_CACHE_NAME) {
-                    console.log('[ServiceWorker] Removing old cache', key);
-                    return caches.delete(key);
-                }
-            }));
-        })
+        Promise.all([
+            self.clients.claim(),
+            caches.keys().then(keys =>
+                Promise.all(
+                    keys
+                        .filter(k => k !== SHELL_CACHE && k !== RUNTIME_CACHE && k !== DATA_CACHE)
+                        .map(k => {
+                            console.log('[SW] Deleting stale cache:', k);
+                            return caches.delete(k);
+                        })
+                )
+            )
+        ])
     );
 });
 
-// 3. Fetch - Cache strategies
+// ─── FETCH — Smart routing ───────────────────────────────────────────────────
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
-    // Skip cross-origin or extension requests unless they are APIs we want
+    // Ignore non-HTTP and chrome-extension requests
     if (!request.url.startsWith('http')) return;
 
-    // Is it an API call? We use Network First, fallback to cache for API GETs.
-    // Assuming API calls go to supabase or end in standard paths
-    // You can customize this condition!
-    const isApiCall = request.url.includes('supabase.co/rest/v1') || url.pathname.startsWith('/api/');
+    // ── Supabase API mutations (POST/PATCH/DELETE/PUT) ──
+    // Queue them offline, replay when back online
+    const isSupabaseApi = request.url.includes('supabase.co/rest/v1');
+    const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method);
 
-    // Handle POST/PUT/DELETE mutations specifically for background sync fallback
-    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method)) {
-        event.respondWith(
-            fetch(request.clone()).catch(async (error) => {
-                // If offline, save the request to IndexedDB Queue
-                const serializedRequest = {
-                    url: request.url,
-                    method: request.method,
-                    headers: Array.from(request.headers.entries()),
-                    timestamp: Date.now()
-                };
-
-                // Read body if it exists
-                if (request.method !== 'GET' && request.method !== 'HEAD') {
-                    const clonedReq = request.clone();
-                    try {
-                        const bodyBlob = await clonedReq.blob();
-                        serializedRequest.body = bodyBlob;
-                    } catch (e) {
-                        console.error('Could not clone body', e);
-                    }
-                }
-
-                // Save to queue
-                await saveSyncData(serializedRequest);
-
-                // Try to trigger background sync if supported natively
-                // iOS NOTE: Background sync API is not supported on iOS Safari.
-                if ('sync' in registration) {
-                    try {
-                        await registration.sync.register('sync-offline-mutations');
-                    } catch (e) { } // Ignore
-                }
-
-                // Return a fake successful response to keep the UI from blowing up
-                // The UI should theoretically optimism update and we handle it later
-                return new Response(JSON.stringify({ offlineQueued: true, message: 'Action queued for offline sync' }), {
-                    headers: { 'Content-Type': 'application/json' },
-                    status: 202 // Accepted
-                });
-            })
-        );
+    if (isSupabaseApi && isMutation) {
+        event.respondWith(handleMutation(request));
         return;
     }
 
-    if (isApiCall) {
-        // Network-First for APIs
-        event.respondWith(
-            fetch(request)
-                .then((response) => {
-                    // Clone response to cache it
-                    const responseClone = response.clone();
-                    caches.open(DATA_CACHE_NAME).then((cache) => {
-                        cache.put(request, responseClone);
-                    });
-                    return response;
-                })
-                .catch(() => {
-                    // Try cache if network fails
-                    return caches.match(request);
-                })
-        );
-    } else {
-        // Cache-First for static assets (HTML, CSS, JS, Images, Fonts)
-        // Helps load fast from disk, falling back to network
-        event.respondWith(
-            caches.match(request).then((cachedResponse) => {
-                if (cachedResponse) {
-                    return cachedResponse;
-                }
-
-                return fetch(request)
-                    .then((networkResponse) => {
-                        // Cache the newly fetched asset
-                        // Don't cache opaque responses (type === 'opaque') to avoid polluting quota
-                        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-                            return networkResponse;
-                        }
-                        const responseClone = networkResponse.clone();
-                        caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(request, responseClone);
-                        });
-                        return networkResponse;
-                    })
-                    .catch(() => {
-                        // If it's an HTML page and network fails, show offline.html
-                        if (request.headers.get('accept').includes('text/html')) {
-                            return caches.match('/offline.html');
-                        }
-                        // Optionally return a placeholder image for images
-                    });
-            })
-        );
+    // ── Supabase API GET → Network first, cache fallback ──
+    if (isSupabaseApi && request.method === 'GET') {
+        event.respondWith(networkFirstWithCache(request, DATA_CACHE));
+        return;
     }
+
+    // ── HTML navigations → Cache first, network fallback, offline.html ──
+    // This is the critical fix for iOS "Safari can't open page"
+    const isNavigation = request.mode === 'navigate' ||
+        (request.method === 'GET' && request.headers.get('accept') &&
+            request.headers.get('accept').includes('text/html'));
+
+    if (isNavigation) {
+        event.respondWith(handleNavigation(request));
+        return;
+    }
+
+    // ── Static assets (JS, CSS, fonts, images) → Cache first, then network ──
+    event.respondWith(cacheFirstWithNetworkFallback(request));
 });
 
-// 4. Background Sync - Send queued mutations when back online
-// iOS NOTE: This requires triggering manually on iOS since SyncEvent is Android Chrome only
-self.addEventListener('sync', (event) => {
-    if (event.tag === 'sync-offline-mutations') {
-        console.log('[SW] Syncing offline mutations...');
-        event.waitUntil(processQueue());
+// ─── Navigation handler — serves index.html from cache for SPA routing ──────
+async function handleNavigation(request) {
+    // Try the cache first (this is the key iOS fix)
+    const cachedShell = await caches.match('/index.html', { cacheName: SHELL_CACHE }) ||
+        await caches.match('/', { cacheName: SHELL_CACHE });
+
+    if (cachedShell) {
+        // We have a cached shell — try network in background to keep it fresh
+        updateCacheInBackground('/', SHELL_CACHE);
+        return cachedShell;
     }
-});
 
-// Polyfill function to process queue for iOS (can be called via postMessage)
-async function processQueue() {
-    const queue = await getAllSyncData();
-    if (!queue || queue.length === 0) return;
-
-    console.log(`[SW] Found ${queue.length} queued tasks to sync`);
-
-    for (const item of queue) {
-        try {
-            const initOptions = {
-                method: item.method,
-                headers: item.headers,
-            };
-            if (item.body) {
-                initOptions.body = item.body;
-            }
-
-            // Re-fire the request
-            await fetch(item.url, initOptions);
-
-            // Delete from queue if successful
-            await deleteSyncData(item.id);
-            console.log(`[SW] Successfully synced task ${item.id}`);
-        } catch (error) {
-            console.error(`[SW] Sync failed for task ${item.id}`, error);
-            // We stop processing to maintain order if something fails, 
-            // relying on the next sync event to retry.
-            break;
-        }
+    // Not cached yet — try network
+    try {
+        const networkResponse = await fetch(request);
+        // Cache it for next time
+        const cache = await caches.open(SHELL_CACHE);
+        cache.put(request, networkResponse.clone());
+        return networkResponse;
+    } catch (err) {
+        // Truly offline and not cached — show offline page
+        const offlinePage = await caches.match('/offline.html');
+        return offlinePage || new Response('Offline', { status: 503 });
     }
 }
 
-// 5. Message Event - Allow clients to communicate with SW
+// ─── Network first with cache fallback (for API GETs) ───────────────────────
+async function networkFirstWithCache(request, cacheName) {
+    try {
+        const networkResponse = await fetch(request.clone());
+        if (networkResponse.ok) {
+            const cache = await caches.open(cacheName);
+            cache.put(request, networkResponse.clone());
+        }
+        return networkResponse;
+    } catch (err) {
+        const cached = await caches.match(request, { cacheName });
+        return cached || new Response(JSON.stringify({ error: 'Offline', data: [] }), {
+            headers: { 'Content-Type': 'application/json' },
+            status: 503
+        });
+    }
+}
+
+// ─── Cache first with network fallback (for static assets) ──────────────────
+async function cacheFirstWithNetworkFallback(request) {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+
+    try {
+        const networkResponse = await fetch(request);
+        // Only cache valid same-origin responses
+        if (networkResponse && networkResponse.status === 200) {
+            const cache = await caches.open(RUNTIME_CACHE);
+            cache.put(request, networkResponse.clone());
+        }
+        return networkResponse;
+    } catch (err) {
+        // Return nothing for non-critical missing assets
+        return new Response('', { status: 408 });
+    }
+}
+
+// ─── Background cache update (for shell freshness) ──────────────────────────
+function updateCacheInBackground(url, cacheName) {
+    fetch(url).then(response => {
+        if (response.ok) {
+            caches.open(cacheName).then(cache => cache.put(url, response));
+        }
+    }).catch(() => { }); // silent fail — we already served from cache
+}
+
+// ─── Offline mutation handler ────────────────────────────────────────────────
+async function handleMutation(request) {
+    try {
+        // Try to send it directly
+        const response = await fetch(request.clone());
+        return response;
+    } catch (err) {
+        // Offline — serialize and queue the request
+        console.log('[SW] Network unavailable, queuing mutation:', request.url);
+
+        try {
+            let bodyText = null;
+            if (request.method !== 'GET' && request.method !== 'HEAD') {
+                try { bodyText = await request.clone().text(); } catch (_) { }
+            }
+
+            const queuedItem = {
+                url: request.url,
+                method: request.method,
+                headers: Array.from(request.headers.entries()),
+                body: bodyText,
+                timestamp: Date.now()
+            };
+
+            await dbAdd(queuedItem);
+            console.log('[SW] Mutation queued successfully');
+        } catch (queueErr) {
+            console.error('[SW] Failed to queue mutation:', queueErr);
+        }
+
+        // Return a 202 so the optimistic UI doesn't crash
+        return new Response(JSON.stringify({ offlineQueued: true, message: 'Queued for sync' }), {
+            headers: { 'Content-Type': 'application/json' },
+            status: 202
+        });
+    }
+}
+
+// ─── Background Sync (Android Chrome) ───────────────────────────────────────
+self.addEventListener('sync', (event) => {
+    if (event.tag === 'sync-offline-mutations') {
+        console.log('[SW] Background sync event received');
+        event.waitUntil(processSWQueue());
+    }
+});
+
+// ─── Message handler (iOS manual sync trigger + SKIP_WAITING) ───────────────
 self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SKIP_WAITING') {
+    if (!event.data) return;
+
+    if (event.data.type === 'SKIP_WAITING') {
         self.skipWaiting();
     }
 
-    // Manual sync trigger for iOS workaround
-    if (event.data && event.data.type === 'MANUAL_SYNC') {
-        processQueue();
+    // iOS workaround: main thread calls this when it detects online
+    if (event.data.type === 'MANUAL_SYNC') {
+        processSWQueue();
     }
 });
+
+// ─── Process SW-level mutation queue ────────────────────────────────────────
+// Note: This queue is separate from the app-level local-first queue.
+// This handles mutations that were intercepted by the SW fetch handler.
+async function processSWQueue() {
+    const queue = await dbGetAll();
+    if (!queue || queue.length === 0) {
+        console.log('[SW] No queued SW mutations to sync');
+        return;
+    }
+
+    console.log(`[SW] Processing ${queue.length} queued mutations...`);
+
+    for (const item of queue) {
+        try {
+            const init = {
+                method: item.method,
+                headers: item.headers ? Object.fromEntries(item.headers) : {}
+            };
+            if (item.body) {
+                init.body = item.body;
+            }
+
+            const response = await fetch(item.url, init);
+
+            if (response.ok || response.status === 409) {
+                // 409 means conflict/already exists — still remove from queue
+                await dbDelete(item.id);
+                console.log(`[SW] ✅ Synced queued mutation id=${item.id}`);
+            } else {
+                console.warn(`[SW] Non-OK response for id=${item.id}: ${response.status}`);
+            }
+        } catch (err) {
+            console.error(`[SW] Failed to sync queued mutation id=${item.id}:`, err);
+            // Don't break — continue with remaining items
+        }
+    }
+
+    // Notify all clients that sync completed
+    const clients = await self.clients.matchAll();
+    clients.forEach(client => client.postMessage({ type: 'SW_SYNC_COMPLETE' }));
+}

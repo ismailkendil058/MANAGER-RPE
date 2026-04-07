@@ -1,11 +1,12 @@
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Package,
   ShoppingCart,
+  ShoppingBag,
   Users,
+  Building2,
   BarChart3,
-  LayoutDashboard
 } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
 import { OfflineStatus } from './OfflineStatus';
@@ -14,7 +15,8 @@ const navItems = [
   { path: '/stocks', label: 'Stocks', icon: Package },
   { path: '/ventes', label: 'Ventes', icon: ShoppingCart },
   { path: '/clients', label: 'Clients', icon: Users },
-  { path: '/achats', label: 'Achats', icon: ShoppingCart },
+  { path: '/achats', label: 'Achats', icon: ShoppingBag },
+  { path: '/fournisseurs', label: 'Fournisseurs', icon: Building2 },
   { path: '/rapports', label: 'Rapports', icon: BarChart3 },
 ];
 
@@ -72,8 +74,8 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 w-[92%] max-w-[400px] z-[50]">
-        <div className="bg-white/90 backdrop-blur-2xl border border-white/40 rounded-[2rem] p-1.5 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.08)]">
+      <nav className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 w-[96%] max-w-[440px] z-[50]">
+        <div className="bg-white/90 backdrop-blur-2xl border border-white/40 rounded-[2rem] p-1 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.08)]">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = isPathActive(item.path);
@@ -85,8 +87,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
                   triggerHaptic('light');
                   navigate(item.path);
                 }}
-                className={`relative flex flex-col items-center justify-center h-12 w-12 rounded-[1.5rem] transition-all duration-300 ${isActive ? 'text-primary' : 'text-slate-400'
-                  }`}
+                className={`relative flex flex-col items-center justify-center h-10 w-10 rounded-[1.25rem] transition-all duration-300 ${isActive ? 'text-primary' : 'text-slate-400'}`}
               >
                 {isActive && (
                   <motion.div
@@ -95,7 +96,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
                     transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
                 )}
-                <Icon className={`w-5 h-5 transition-all duration-300 ${isActive ? 'scale-110' : 'scale-100 group-active:scale-90'}`} />
+                <Icon className={`w-4 h-4 transition-all duration-300 ${isActive ? 'scale-110' : 'scale-100 group-active:scale-90'}`} />
                 {isActive && (
                   <motion.div
                     layoutId="activeDot"

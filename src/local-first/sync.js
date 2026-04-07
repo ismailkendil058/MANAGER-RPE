@@ -1,29 +1,26 @@
 import { getUnsyncedRecords, markAsSynced } from './storage.js';
 
-// SUPABASE: Replace with your actual Supabase configuration and credentials
-const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+// Real Supabase credentials (matching lib/supabase.ts)
+const SUPABASE_URL = 'https://pvssckygpatanopdatrf.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2c3Nja3lncGF0YW5vcGRhdHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODgyNjgsImV4cCI6MjA5MDM2NDI2OH0.8LjyOxzui-yjtrBOC64uR1Y7BKuy0s_peeGfJ9TxnBw';
 
 let isSyncing = false;
 
 const fetchSupabase = async (url, options = {}) => {
-    if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
-        console.warn('Supabase is not configured yet. Skipping sync.');
-        return null; // Don't throw to avoid UI crashing offline
-    }
     const res = await fetch(`${SUPABASE_URL}/rest/v1${url}`, {
         ...options,
         headers: {
             'apikey': SUPABASE_KEY,
             'Authorization': `Bearer ${SUPABASE_KEY}`,
             'Content-Type': 'application/json',
-            'Prefer': 'return=representation', // Optional: 'resolution=merge-duplicates' for UPSERTs
+            'Prefer': 'return=representation',
             ...(options.headers || {})
         }
     });
 
     if (!res.ok) {
-        throw new Error(`Supabase request failed: ${res.statusText}`);
+        const errText = await res.text();
+        throw new Error(`Supabase request failed [${res.status}]: ${errText}`);
     }
     return res.status !== 204 ? res.json() : null;
 };
@@ -41,16 +38,30 @@ export const syncToSupabase = async () => {
             return;
         }
 
+        console.log(`[Sync] Syncing ${unsynced.length} pending records to Supabase...`);
+
         for (const record of unsynced) {
             try {
                 if (record.action === 'delete') {
-                    // Send delete
                     await fetchSupabase(`/${record.table}?id=eq.${record.id}`, { method: 'DELETE' });
+                } else if (record.action === 'update') {
+                    // PATCH / update existing row
+                    await fetchSupabase(
+                        `/${record.table}?id=eq.${record.id}`,
+                        {
+                            method: 'PATCH',
+                            headers: { 'Prefer': 'return=representation' },
+                            body: JSON.stringify({
+                                ...record.data,
+                                updated_at: record.updated_at
+                            })
+                        }
+                    );
                 } else {
-                    // UPSERT (last write wins natively pushed with primary key)
+                    // INSERT / create — use UPSERT to avoid duplicates
                     await fetchSupabase(`/${record.table}`, {
                         method: 'POST',
-                        headers: { 'Prefer': 'resolution=merge-duplicates' }, // Enables UPSERT
+                        headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' },
                         body: JSON.stringify({
                             id: record.id,
                             ...record.data,
@@ -59,15 +70,17 @@ export const syncToSupabase = async () => {
                     });
                 }
 
-                // Success: mark as synced in local DB
+                // Mark as synced in local DB
                 await markAsSynced(record.id);
+                console.log(`[Sync] ✅ Synced record ${record.id} (table: ${record.table})`);
             } catch (err) {
-                console.error(`Failed to sync record ${record.id}:`, err);
+                console.error(`[Sync] ❌ Failed to sync record ${record.id} (${record.table}):`, err);
+                // Continue with remaining records rather than stopping
             }
         }
 
     } catch (error) {
-        console.error('Master Sync process failed:', error);
+        console.error('[Sync] Master sync process failed:', error);
     } finally {
         isSyncing = false;
         const remaining = await getUnsyncedRecords();
@@ -75,8 +88,15 @@ export const syncToSupabase = async () => {
     }
 };
 
-window.addEventListener('online', syncToSupabase);
+// Auto-sync when back online
+window.addEventListener('online', () => {
+    console.log('[Sync] Network restored — triggering sync...');
+    setTimeout(syncToSupabase, 800); // small delay so connection is stable
+});
+
+// Attempt sync 500ms after a local change (also works when already online)
 window.addEventListener('local-data-changed', () => {
-    // Attempt sync 500ms after a local change
-    setTimeout(syncToSupabase, 500);
+    if (navigator.onLine) {
+        setTimeout(syncToSupabase, 500);
+    }
 });
