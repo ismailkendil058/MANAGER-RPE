@@ -44,51 +44,73 @@ export function registerServiceWorker() {
 }
 
 function promptUserToRefresh(worker) {
-    // Create a beautiful update banner dynamically
     if (document.getElementById('sw-update-banner')) return;
 
-    // Inject styles
     const style = document.createElement('style');
     style.textContent = `
         #sw-update-banner {
             position: fixed;
-            bottom: 80px;
+            bottom: 100px;
             left: 50%;
-            transform: translateX(-50%);
-            background: #132b6e; /* Primary color */
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(19, 43, 110, 0.95);
+            backdrop-filter: blur(12px);
             color: #fff;
-            padding: 12px 16px;
-            border-radius: 8px;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            padding: 16px 20px;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
             display: flex;
             align-items: center;
             gap: 16px;
             z-index: 9999;
-            font-family: system-ui, sans-serif;
-            font-size: 14px;
+            font-family: inherit;
+            width: calc(100% - 40px);
+            max-width: 400px;
+            border: 1px solid rgba(255,255,255,0.1);
+            animation: slideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
-        #sw-update-banner button {
+        @keyframes slideIn {
+            to { transform: translateX(-50%) translateY(0); }
+        }
+        #sw-update-banner .content {
+            flex: 1;
+        }
+        #sw-update-banner .title {
+            font-weight: 800;
+            font-size: 14px;
+            display: block;
+            margin-bottom: 2px;
+        }
+        #sw-update-banner .subtitle {
+            font-size: 11px;
+            opacity: 0.8;
+            display: block;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        #sw-update-banner button.update-btn {
             background: #fff;
             color: #132b6e;
             border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-weight: 600;
+            padding: 10px 18px;
+            border-radius: 14px;
+            font-weight: 800;
+            font-size: 13px;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s;
+            white-space: nowrap;
         }
-        #sw-update-banner button:hover {
-            background: #f1f5f9;
+        #sw-update-banner button.update-btn:active {
+            transform: scale(0.95);
         }
         .sw-update-close {
-            background: transparent !important;
-            color: #fff !important;
-            padding: 4px !important;
-            opacity: 0.8;
-        }
-        .sw-update-close:hover {
-            background: rgba(255,255,255,0.1) !important;
-            opacity: 1;
+            background: transparent;
+            color: #fff;
+            border: none;
+            padding: 4px;
+            font-size: 18px;
+            opacity: 0.5;
+            cursor: pointer;
         }
     `;
     document.head.appendChild(style);
@@ -96,23 +118,42 @@ function promptUserToRefresh(worker) {
     const banner = document.createElement('div');
     banner.id = 'sw-update-banner';
 
-    const text = document.createElement('span');
-    text.textContent = 'Une nouvelle version est disponible !';
+    const content = document.createElement('div');
+    content.className = 'content';
+
+    const title = document.createElement('span');
+    title.className = 'title';
+    title.textContent = 'Mise à jour disponible';
+
+    const subtitle = document.createElement('span');
+    subtitle.className = 'subtitle';
+    subtitle.textContent = 'Nouvelle version prête';
+
+    content.appendChild(subtitle);
+    content.appendChild(title);
 
     const refreshBtn = document.createElement('button');
-    refreshBtn.textContent = 'Mettre à jour';
+    refreshBtn.className = 'update-btn';
+    refreshBtn.textContent = 'Installer';
     refreshBtn.onclick = () => {
-        banner.remove();
-        // Send skipWaiting to the new worker to activate it immediately
-        worker.postMessage({ type: 'SKIP_WAITING' });
+        banner.style.transform = 'translateX(-50%) translateY(100px)';
+        banner.style.opacity = '0';
+        setTimeout(() => {
+            worker.postMessage({ type: 'SKIP_WAITING' });
+            banner.remove();
+        }, 300);
     };
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'sw-update-close';
     closeBtn.innerHTML = '✕';
-    closeBtn.onclick = () => banner.remove();
+    closeBtn.onclick = () => {
+        banner.style.transform = 'translateX(-50%) translateY(100px)';
+        banner.style.opacity = '0';
+        setTimeout(() => banner.remove(), 300);
+    };
 
-    banner.appendChild(text);
+    banner.appendChild(content);
     banner.appendChild(refreshBtn);
     banner.appendChild(closeBtn);
 

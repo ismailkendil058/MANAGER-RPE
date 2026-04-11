@@ -38,5 +38,37 @@
             "type": "image/jpeg",
             "purpose": "maskable"
         }
+    ],
+    "shortcuts": [
+        {
+            "name": "Stocks",
+            "url": "/stocks",
+            "icons": [
+                {
+                    "src": "/Blue app icon design.jpg?v=5",
+                    "sizes": "192x192"
+                }
+            ]
+        },
+        {
+            "name": "Ventes",
+            "url": "/ventes",
+            "icons": [
+                {
+                    "src": "/Blue app icon design.jpg?v=5",
+                    "sizes": "192x192"
+                }
+            ]
+        },
+        {
+            "name": "Achats",
+            "url": "/achats",
+            "icons": [
+                {
+                    "src": "/Blue app icon design.jpg?v=5",
+                    "sizes": "192x192"
+                }
+            ]
+        }
     ]
 }

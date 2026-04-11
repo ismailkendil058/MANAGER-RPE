@@ -22,13 +22,14 @@ export const OfflineStatus = () => {
         <AnimatePresence>
             {!isOnline && (
                 <motion.div
-                    initial={{ y: -50, opacity: 0 }}
+                    initial={{ y: -20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: -50, opacity: 0 }}
-                    className="fixed top-14 left-0 right-0 z-40 px-4 py-2 bg-destructive/90 text-destructive-foreground backdrop-blur-md flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider shadow-lg"
+                    exit={{ y: -20, opacity: 0 }}
+                    className="fixed top-[calc(max(1rem,env(safe-area-inset-top))+3.5rem)] left-0 right-0 z-[45] px-4 py-1.5 bg-red-500/90 text-white backdrop-blur-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.15em] shadow-[0_4px_20px_rgba(239,68,68,0.2)]"
                 >
-                    <WifiOff className="w-3.5 h-3.5" />
-                    <span>Hors ligne — Mode consultation seule</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                    <WifiOff className="w-3 h-3" />
+                    <span>Mode Hors Ligne Activé</span>
                 </motion.div>
             )}
         </AnimatePresence>

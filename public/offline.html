@@ -3,100 +3,144 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Hors Ligne - Recyclage Pro</title>
     <style>
+        :root {
+            --primary: #132b6e;
+            --bg: #F9FBFF;
+        }
+
         body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background-color: #f8fafc;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
             color: #1e293b;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100vh;
             margin: 0;
-            padding: 20px;
+            padding: 24px;
             text-align: center;
+            overflow: hidden;
         }
 
-        .container {
-            max-width: 500px;
+        .card {
             background: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            padding: 48px 32px;
+            border-radius: 40px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.05);
+            max-width: 400px;
+            width: 100%;
+            border: 1px solid rgba(0, 0, 0, 0.02);
+        }
+
+        .icon-box {
+            width: 80px;
+            height: 80px;
+            background: var(--primary);
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 32px;
+            box-shadow: 0 15px 30px rgba(19, 43, 110, 0.2);
         }
 
         .icon {
-            font-size: 48px;
-            margin-bottom: 20px;
+            font-size: 32px;
+            animation: pulse 2s infinite;
         }
 
         h1 {
-            color: #132b6e;
-            margin-top: 0;
+            font-size: 24px;
+            font-weight: 900;
+            color: #0f172a;
+            margin: 0 0 12px;
+            letter-spacing: -0.02em;
         }
 
         p {
+            font-size: 15px;
             color: #64748b;
-            line-height: 1.5;
-            margin-bottom: 24px;
+            line-height: 1.6;
+            margin: 0 0 32px;
         }
 
-        .features {
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
             background: #f1f5f9;
-            padding: 16px;
-            border-radius: 8px;
-            text-align: left;
-            margin-bottom: 24px;
-        }
-
-        .features h3 {
-            margin-top: 0;
-            font-size: 16px;
-            color: #334155;
-        }
-
-        .features ul {
-            margin: 0;
-            padding-left: 20px;
+            border-radius: 100px;
+            font-size: 12px;
+            font-weight: 700;
             color: #475569;
+            margin-bottom: 32px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            background: #ef4444;
+            border-radius: 50%;
         }
 
         .btn {
-            background-color: #132b6e;
+            background: var(--primary);
             color: white;
             border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            font-weight: 600;
+            padding: 16px 32px;
+            border-radius: 18px;
+            font-size: 15px;
+            font-weight: 700;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 100%;
+            box-shadow: 0 10px 20px rgba(19, 43, 110, 0.15);
         }
 
-        .btn:hover {
-            background-color: #1e3a8a;
+        .btn:active {
+            transform: scale(0.96);
+            opacity: 0.9;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <div class="icon">📡</div>
-        <h1>Vous êtes hors ligne</h1>
-        <p>Il semble que vous ayez perdu votre connexion internet. Ne vous inquiétez pas, l'application est conçue pour
-            fonctionner avec des fonctionnalités limitées.</p>
-
-        <div class="features">
-            <h3>Disponibles hors ligne :</h3>
-            <ul>
-                <li>Consultation des dernières données chargées</li>
-                <li>Mise en file d'attente de certaines actions</li>
-            </ul>
+    <div class="card">
+        <div class="icon-box">
+            <span class="icon">📡</span>
         </div>
-
-        <button class="btn" onclick="window.location.reload()">Réessayer</button>
+        <div class="status-badge">
+            <div class="dot"></div>
+            Hors Connexion
+        </div>
+        <h1>Pas d'Internet</h1>
+        <p>L'application Recyclage Pro nécessite une connexion pour charger de nouvelles données. <br><br>Cependant,
+            vous pouvez toujours accéder aux sections déjà consultées.</p>
+        <button class="btn" onclick="window.location.reload()">Rafraîchir la Page</button>
     </div>
 </body>
 
