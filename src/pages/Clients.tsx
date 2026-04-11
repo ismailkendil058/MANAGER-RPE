@@ -15,15 +15,19 @@ const Clients = () => {
   const [showForm, setShowForm] = useState(false);
   const [selectedClient, setSelectedClient] = useState<any | null>(null);
   const [form, setForm] = useState({ name: '', phone: '', address: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAdd = async () => {
-    if (!form.name.trim()) return;
+    if (!form.name.trim() || isSubmitting) return;
+    setIsSubmitting(true);
     try {
       await addClient({ name: form.name, phone: form.phone, address: form.address });
       setForm({ name: '', phone: '', address: '' });
       setShowForm(false);
     } catch (error) {
       console.error('Failed to add client:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -198,11 +202,15 @@ const Clients = () => {
               <div className="p-6 bg-white border-t border-slate-100 shrink-0 safe-area-bottom shadow-[0_-10px_40px_rgba(0,0,0,0.02)]">
                 <button
                   onClick={handleAdd}
-                  disabled={!form.name.trim()}
+                  disabled={!form.name.trim() || isSubmitting}
                   className="w-full h-16 bg-primary text-white rounded-[1.5rem] text-sm font-black flex items-center justify-center gap-3 active:scale-[0.98] transition-all disabled:opacity-40 shadow-xl shadow-primary/20"
                 >
-                  <Plus className="w-5 h-5" />
-                  CRÉER LE COMPTE
+                  {isSubmitting ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Plus className="w-5 h-5" />
+                  )}
+                  {isSubmitting ? 'CRÉATION...' : 'CRÉER LE COMPTE'}
                 </button>
               </div>
             </motion.div>

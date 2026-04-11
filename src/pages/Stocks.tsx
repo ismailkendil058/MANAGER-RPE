@@ -19,15 +19,15 @@ const Stocks = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
-
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const filtered = stocksState.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) || p.name_ar.includes(search)
   );
 
   const handleAdd = async () => {
-    if (!form.name.trim()) return;
+    if (!form.name.trim() || isSubmitting) return;
+    setIsSubmitting(true);
     const newProduct: Omit<Product, 'id' | 'inserted_at' | 'updated_at'> = {
       ...form,
       weight: '',
@@ -44,18 +44,23 @@ const Stocks = () => {
       setShowForm(false);
     } catch (error) {
       console.error('Add product failed:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
 
   const handleSaveEdit = async () => {
-    if (!editingId) return;
+    if (!editingId || isSubmitting) return;
+    setIsSubmitting(true);
     try {
       await updateStock(editingId, form);
       setEditingId(null);
       setForm(emptyForm);
     } catch (error) {
       console.error('Update product failed:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -165,11 +170,15 @@ const Stocks = () => {
               <div className="p-6 bg-white border-t border-slate-100 shrink-0 safe-area-bottom shadow-[0_-10px_40px_rgba(0,0,0,0.02)]">
                 <button
                   onClick={handleAdd}
-                  disabled={!form.name.trim()}
+                  disabled={!form.name.trim() || isSubmitting}
                   className="w-full h-16 bg-primary text-white rounded-[1.5rem] text-sm font-black flex items-center justify-center gap-3 active:scale-[0.98] transition-all disabled:opacity-40 shadow-xl shadow-primary/20"
                 >
-                  <Plus className="w-5 h-5" />
-                  CONFIRMER L'AJOUT
+                  {isSubmitting ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Plus className="w-5 h-5" />
+                  )}
+                  {isSubmitting ? 'VALIDATION...' : "CONFIRMER L'AJOUT"}
                 </button>
               </div>
             </motion.div>
@@ -210,8 +219,13 @@ const Stocks = () => {
                     <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full h-12 bg-slate-50 border-none rounded-xl px-4 text-sm font-bold" placeholder="Désignation" />
                     <input type="number" value={form.quantity || ''} onChange={e => setForm({ ...form, quantity: Number(e.target.value) })} className="w-full h-12 bg-slate-50 border-none rounded-xl px-4 text-sm font-bold" placeholder="Quantité (kg)" />
                   </div>
-                  <button onClick={handleSaveEdit} className="w-full h-12 bg-slate-900 text-white rounded-xl text-xs font-bold active:scale-95 transition-transform">
-                    Enregistrer les modifications
+                  <button
+                    onClick={handleSaveEdit}
+                    disabled={isSubmitting}
+                    className="w-full h-12 bg-slate-900 text-white rounded-xl text-xs font-bold active:scale-95 transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                    {isSubmitting ? 'Enregistrement...' : 'Enregistrer les modifications'}
                   </button>
                 </div>
               ) : (

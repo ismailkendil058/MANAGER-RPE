@@ -263,7 +263,12 @@ const Achats = () => {
                   disabled={!canSubmit || isSubmitting}
                   className={`w-full h-16 text-white rounded-[1.5rem] text-sm font-black flex items-center justify-center gap-3 active:scale-[0.98] transition-all shadow-xl disabled:opacity-40 disabled:active:scale-100 ${isRetour ? 'bg-red-500 shadow-red-500/20' : 'bg-primary shadow-primary/20'}`}
                 >
-                  <Check className="w-5 h-5" /> {isRetour ? 'VALIDER LE RETOUR' : "VALIDER L'ACHAT"}
+                  {isSubmitting ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Check className="w-5 h-5" />
+                  )}
+                  {isSubmitting ? (isRetour ? 'RETOUR EN COURS...' : 'ACHAT EN COURS...') : (isRetour ? 'VALIDER LE RETOUR' : "VALIDER L'ACHAT")}
                 </button>
               </div>
             </motion.div>
@@ -281,13 +286,13 @@ const Achats = () => {
               <div className="h-0.5 flex-1 bg-slate-100" />
             </div>
             <div className="space-y-4">
-                {dayPurchases.map(purchase => (
-                  <motion.div 
-                    key={purchase.id} 
-                    whileTap={{ scale: 0.98 }} 
-                    className="premium-card cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => navigate(`/achat/${purchase.id}`)}
-                  >
+              {dayPurchases.map(purchase => (
+                <motion.div
+                  key={purchase.id}
+                  whileTap={{ scale: 0.98 }}
+                  className="premium-card cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => navigate(`/achat/${purchase.id}`)}
+                >
 
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
@@ -298,10 +303,10 @@ const Achats = () => {
                       </div>
                     </div>
                     <div className="text-right flex flex-col items-end gap-1.5 mt-1">
-                        <p className="text-sm font-black text-slate-900 leading-none mb-1.5">{formatDA(purchase.total)}</p>
-                        {purchase.status === 'returned' && (
-                          <span className="text-[9px] font-black uppercase text-red-500 bg-red-50 px-2.5 py-1 rounded-full tracking-wider">Retourné</span>
-                        )}
+                      <p className="text-sm font-black text-slate-900 leading-none mb-1.5">{formatDA(purchase.total)}</p>
+                      {purchase.status === 'returned' && (
+                        <span className="text-[9px] font-black uppercase text-red-500 bg-red-50 px-2.5 py-1 rounded-full tracking-wider">Retourné</span>
+                      )}
 
                     </div>
                   </div>

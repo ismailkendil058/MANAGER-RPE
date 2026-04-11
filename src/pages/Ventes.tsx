@@ -281,8 +281,12 @@ const Ventes = () => {
                   disabled={!canSubmit || isSubmitting}
                   className={`w-full h-16 text-white rounded-[1.5rem] text-sm font-black flex items-center justify-center gap-3 active:scale-[0.98] transition-all shadow-xl disabled:opacity-40 disabled:active:scale-100 ${isRetour ? 'bg-red-500 shadow-red-500/20' : 'bg-primary shadow-primary/20'}`}
                 >
-                  <Check className="w-5 h-5" />
-                  {isRetour ? 'VALIDER LE RETOUR' : 'CONFIRMER LA VENTE'}
+                  {isSubmitting ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Check className="w-5 h-5" />
+                  )}
+                  {isSubmitting ? (isRetour ? 'RETOUR EN COURS...' : 'VENTE EN COURS...') : (isRetour ? 'VALIDER LE RETOUR' : 'CONFIRMER LA VENTE')}
                 </button>
               </div>
             </motion.div>
@@ -306,9 +310,9 @@ const Ventes = () => {
 
               <div className="space-y-4">
                 {daySales.map(sale => (
-                  <motion.div 
-                    key={sale.id} 
-                    whileTap={{ scale: 0.98 }} 
+                  <motion.div
+                    key={sale.id}
+                    whileTap={{ scale: 0.98 }}
                     className="premium-card cursor-pointer hover:shadow-md transition-shadow"
                     onClick={() => navigate(`/vente/${sale.id}`)}
                   >

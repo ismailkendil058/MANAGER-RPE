@@ -48,13 +48,16 @@ const Fournisseurs = () => {
 
     // ── Add supplier ────────────────────────────────────────────
     const handleAddSupplier = async () => {
-        if (!supplierForm.name.trim()) return;
+        if (!supplierForm.name.trim() || isSubmitting) return;
+        setIsSubmitting(true);
         try {
             await addSupplier({ name: supplierForm.name, phone: supplierForm.phone, address: supplierForm.address });
             setSupplierForm({ name: '', phone: '', address: '' });
             setShowAddSupplierForm(false);
         } catch (error) {
             console.error('Failed to add supplier:', error);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -138,8 +141,8 @@ const Fournisseurs = () => {
     // SUPPLIER DETAIL VIEW
     // ════════════════════════════════════════════════════════════
     if (selectedSupplier) {
-    return (
-        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4 -mt-20">
+        return (
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4 -mt-20">
                 <button
                     onClick={() => setSelectedSupplier(null)}
                     className="flex items-center gap-1.5 text-xs text-muted-foreground active:scale-95 transition-transform"
@@ -336,8 +339,12 @@ const Fournisseurs = () => {
                                         disabled={!canSubmit || isSubmitting}
                                         className={`w-full h-16 text-white rounded-[1.5rem] text-sm font-black flex items-center justify-center gap-3 active:scale-[0.98] transition-all shadow-xl disabled:opacity-40 disabled:active:scale-100 ${isRetour ? 'bg-red-500 shadow-red-500/20' : 'bg-orange-500 shadow-orange-500/20'}`}
                                     >
-                                        <Check className="w-5 h-5" />
-                                        {isRetour ? 'VALIDER LE RETOUR' : "VALIDER L'ACHAT"}
+                                        {isSubmitting ? (
+                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        ) : (
+                                            <Check className="w-5 h-5" />
+                                        )}
+                                        {isSubmitting ? (isRetour ? 'RETOUR EN COURS...' : 'VALIDATION...') : (isRetour ? 'VALIDER LE RETOUR' : "VALIDER L'ACHAT")}
                                     </button>
                                 </div>
                             </motion.div>
@@ -436,11 +443,15 @@ const Fournisseurs = () => {
                             <div className="p-6 bg-white border-t border-slate-100 shrink-0 safe-area-bottom shadow-[0_-10px_40px_rgba(0,0,0,0.02)]">
                                 <button
                                     onClick={handleAddSupplier}
-                                    disabled={!supplierForm.name.trim()}
+                                    disabled={!supplierForm.name.trim() || isSubmitting}
                                     className="w-full h-16 bg-orange-500 text-white rounded-[1.5rem] text-sm font-black flex items-center justify-center gap-3 active:scale-[0.98] transition-all disabled:opacity-40 shadow-xl shadow-orange-500/20"
                                 >
-                                    <Plus className="w-5 h-5" />
-                                    CRÉER LE COMPTE
+                                    {isSubmitting ? (
+                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    ) : (
+                                        <Plus className="w-5 h-5" />
+                                    )}
+                                    {isSubmitting ? 'CRÉATION...' : 'CRÉER LE COMPTE'}
                                 </button>
                             </div>
                         </motion.div>
