@@ -6,7 +6,7 @@
 //  3. IndexedDB queue for offline mutations, flushed on reconnect
 // ============================================================
 
-const CACHE_VERSION = 'v4'; // bump this to force SW update
+const CACHE_VERSION = 'v5'; // bump this to force SW update
 const SHELL_CACHE = `app-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `runtime-${CACHE_VERSION}`;
 const DATA_CACHE = `api-data-${CACHE_VERSION}`;
@@ -17,7 +17,7 @@ const APP_SHELL_URLS = [
     '/index.html',
     '/offline.html',
     '/manifest.json',
-    '/Blue app icon design.jpg',
+    '/Blue app icon design.jpg?v=5',
 ];
 
 // ─── IndexedDB helpers (for offline mutation queue) ─────────────────────────
