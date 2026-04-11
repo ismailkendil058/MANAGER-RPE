@@ -6,7 +6,7 @@
 //  3. IndexedDB queue for offline mutations, flushed on reconnect
 // ============================================================
 
-const CACHE_VERSION = 'v6'; // bump this to force SW update
+const CACHE_VERSION = 'v7'; // bump this to force SW update
 const SHELL_CACHE = `app-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `runtime-${CACHE_VERSION}`;
 const DATA_CACHE = `api-data-${CACHE_VERSION}`;
@@ -17,7 +17,7 @@ const APP_SHELL_URLS = [
     '/index.html',
     '/offline.html',
     '/manifest.json',
-    '/Blue app icon design.jpg?v=5',
+    '/Blue%20app%20icon%20design.jpg?v=5',
 ];
 
 // ─── IndexedDB helpers (for offline mutation queue) ─────────────────────────
@@ -145,30 +145,36 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(cacheFirstWithNetworkFallback(request));
 });
 
-// ─── Navigation handler — serves index.html from cache for SPA routing ──────
+// ─── Navigation handler — Network First (safe for SPAs) ──────────────────────
 async function handleNavigation(request) {
-    // Try the cache first (this is the key iOS fix)
+    // 1. Try network first to get the latest index.html
+    try {
+        const networkResponse = await fetch(request);
+        if (networkResponse.ok) {
+            const cache = await caches.open(SHELL_CACHE);
+            cache.put('/index.html', networkResponse.clone());
+            return networkResponse;
+        }
+    } catch (err) {
+        // Network failed (offline)
+        console.log('[SW] Navigation fetch failed, falling back to cache');
+    }
+
+    // 2. Fallback to cache
     const cachedShell = await caches.match('/index.html', { cacheName: SHELL_CACHE }) ||
         await caches.match('/', { cacheName: SHELL_CACHE });
 
     if (cachedShell) {
-        // We have a cached shell — try network in background to keep it fresh
-        updateCacheInBackground('/', SHELL_CACHE);
         return cachedShell;
     }
 
-    // Not cached yet — try network
+    // 3. Last fallback — offline page
     try {
-        const networkResponse = await fetch(request);
-        // Cache it for next time
-        const cache = await caches.open(SHELL_CACHE);
-        cache.put(request, networkResponse.clone());
-        return networkResponse;
-    } catch (err) {
-        // Truly offline and not cached — show offline page
         const offlinePage = await caches.match('/offline.html');
-        return offlinePage || new Response('Offline', { status: 503 });
-    }
+        if (offlinePage) return offlinePage;
+    } catch (_) { }
+
+    return new Response('Hors ligne', { status: 503, headers: { 'Content-Type': 'text/plain' } });
 }
 
 // ─── Network first with cache fallback (for API GETs) ───────────────────────
@@ -203,7 +209,7 @@ async function cacheFirstWithNetworkFallback(request) {
         }
         return networkResponse;
     } catch (err) {
-        // Return nothing for non-critical missing assets
+        // Return 408 for truly missing assets ONLY if offline
         return new Response('', { status: 408 });
     }
 }
