@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 // @ts-ignore
-import { getAllTableRecords, saveLocally } from '../local-first/storage.js';
+import { getAllTableRecords, saveLocally, syncAndPruneLocalDB } from '../local-first/storage.js';
 import { persistLocalProductQuantity } from '@/local-first/product-cache';
 import { mergeUnsyncedRecords } from '@/local-first/merge-offline-data';
 
@@ -36,8 +36,13 @@ export const usePurchases = () => {
     setLoading(true);
 
     if (!navigator.onLine) {
-      const localCache = localStorage.getItem('erp_purchases');
-      if (localCache) setPurchasesState(JSON.parse(localCache));
+      const cached = await getAllTableRecords('purchases');
+      if (cached && cached.length > 0) {
+        setPurchasesState(cached as PurchaseOrder[]);
+      } else {
+        const localCache = localStorage.getItem('erp_purchases');
+        if (localCache) setPurchasesState(JSON.parse(localCache));
+      }
       setLoading(false);
       fetchingRef.current = false;
       return;
@@ -75,10 +80,18 @@ export const usePurchases = () => {
       })),
     }));
 
+    await syncAndPruneLocalDB('purchases', formatted.map((p: any) => p.id));
+
     const merged = await mergeUnsyncedRecords<PurchaseOrder>('purchases', formatted);
 
     setPurchasesState(merged);
     localStorage.setItem('erp_purchases', JSON.stringify(merged));
+
+    // Offline mirror: persist all purchases into local IndexedDB
+    for (const po of merged) {
+      await saveLocally('purchases', po.id, po, 'update');
+    }
+
     setLoading(false);
     fetchingRef.current = false;
   };
@@ -148,8 +161,13 @@ export const usePurchases = () => {
         }
 
         await saveLocally('purchases', purchaseId, {
-          id: purchaseId, date: newPurchase.date, supplier_id: newPurchase.supplier_id,
-          supplier_name: newPurchase.supplier_name, total: newPurchase.total, status: newPurchase.status
+          id: purchaseId,
+          date: newPurchase.date,
+          supplier_id: newPurchase.supplier_id,
+          supplier_name: newPurchase.supplier_name,
+          total: newPurchase.total,
+          status: newPurchase.status,
+          products: newPurchase.products
         }, 'create');
       } catch (err) {
         console.error('Direct Supabase write failed, falling back to local queue:', err);
@@ -243,5 +261,22 @@ export const usePurchases = () => {
     }
   };
 
-  return { purchasesState, loading, fetchPurchases, addPurchase, returnPurchase };
+  const deletePurchase = async (id: string) => {
+    setPurchasesState(prev => prev.filter(p => p.id !== id));
+    localStorage.setItem('erp_purchases', JSON.stringify(purchasesState.filter(p => p.id !== id)));
+
+    if (navigator.onLine) {
+      try {
+        const { error } = await supabase.from('purchases').delete().eq('id', id);
+        if (error) throw error;
+      } catch (err) {
+        console.error('Direct deletePurchase failed, queuing locally:', err);
+        await saveLocally('purchases', id, null, 'delete');
+      }
+    } else {
+      await saveLocally('purchases', id, null, 'delete');
+    }
+  };
+
+  return { purchasesState, loading, fetchPurchases, addPurchase, returnPurchase, deletePurchase };
 };

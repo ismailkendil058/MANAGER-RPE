@@ -73,10 +73,10 @@ const Rapports = () => {
       statsMap.get(id)![type] += qty;
     };
     sales.filter(s => s.status === 'completed' && s.date.startsWith(selectedMonth)).forEach(s => {
-      s.products.forEach(p => addStat(p.product_id, p.product_name, 'ventes', p.quantity));
+      s.products?.forEach(p => addStat(p.product_id, p.product_name, 'ventes', p.quantity));
     });
     purchases.filter(p => p.status === 'completed' && p.date.startsWith(selectedMonth)).forEach(p => {
-      p.products.forEach(p => addStat(p.product_id, p.product_name, 'achats', p.quantity));
+      p.products?.forEach(p => addStat(p.product_id, p.product_name, 'achats', p.quantity));
     });
     return Array.from(statsMap.values());
   }, [sales, purchases, selectedMonth]);

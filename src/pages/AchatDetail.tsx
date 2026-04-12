@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ShoppingBag, ArrowLeft, Calendar, Truck, Package } from 'lucide-react';
+import { ShoppingBag, ArrowLeft, Calendar, Truck, Package, Printer } from 'lucide-react';
 import { formatDA } from '@/data/mock-data';
 import { usePurchases } from '@/data/use-purchases';
 
@@ -38,6 +38,83 @@ const AchatDetail = () => {
     );
   }
 
+  const handlePrint = () => {
+    const printContent = `
+      <html>
+        <head>
+          <title>Bon d'Achat</title>
+          <style>
+            @page { margin: 0; size: 58mm auto; }
+            body { font-family: monospace; width: 58mm; padding: 5px; margin: 0; color: #000; font-size: 12px; background: white; }
+            .text-center { text-align: center; }
+            .text-right { text-align: right; }
+            .text-left { text-align: left; }
+            .bold { font-weight: bold; }
+            .divider { border-top: 1px dashed #000; margin: 5px 0; }
+            .flex-between { display: flex; justify-content: space-between; }
+            table { width: 100%; border-collapse: collapse; margin: 5px 0; }
+            th, td { text-align: left; padding: 2px 0; font-size: 11px; }
+            .qty { width: 15%; text-align: center; }
+            .price { width: 25%; text-align: right; }
+            .total { width: 30%; text-align: right; }
+          </style>
+        </head>
+        <body>
+          <div class="text-center bold" style="font-size: 16px; margin-bottom: 5px;">FER & ACIER PRO</div>
+          <div class="text-center bold">Bon d'Achat</div>
+          <div class="divider"></div>
+          <div>Ref: #${purchase.id.substring(0, 8)}</div>
+          <div>Date: ${new Date(purchase.date).toLocaleDateString('fr-FR')}</div>
+          <div>Frn: ${purchase.supplier_name.substring(0, 15)}</div>
+          <div class="divider"></div>
+          <table>
+            <thead>
+              <tr>
+                <th>Art</th>
+                <th class="qty">Qt</th>
+                <th class="price">PU</th>
+                <th class="total">Tot</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${purchase.products?.map((p: any) => `
+                <tr>
+                  <td>${p.product_name.substring(0, 10)}.</td>
+                  <td class="qty">${p.quantity}</td>
+                  <td class="price">${p.unit_price}</td>
+                  <td class="total">${p.total}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <div class="divider"></div>
+          <div class="flex-between bold">
+            <span>TOTAL:</span>
+            <span>${formatDA(purchase.total)}</span>
+          </div>
+          <div class="divider"></div>
+        </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+
+    iframe.contentDocument?.open();
+    iframe.contentDocument?.write(printContent);
+    iframe.contentDocument?.close();
+
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 1000);
+    }, 500);
+  };
+
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -52,9 +129,17 @@ const AchatDetail = () => {
         >
           <ArrowLeft className="w-5 h-5 text-slate-600" />
         </button>
-        <div className="text-right">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Référence</p>
-          <p className="text-sm font-black text-slate-900">#{purchase.id}</p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handlePrint}
+            className="w-10 h-10 rounded-full bg-slate-900 text-white shadow-sm flex items-center justify-center active:scale-90 transition-transform"
+          >
+            <Printer className="w-5 h-5" />
+          </button>
+          <div className="text-right">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Référence</p>
+            <p className="text-sm font-black text-slate-900">#{purchase.id.substring(0, 8)}</p>
+          </div>
         </div>
       </div>
 
@@ -82,7 +167,7 @@ const AchatDetail = () => {
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Articles achetés</h3>
           </div>
           <div className="space-y-3">
-            {purchase.products.map((product, index) => (
+            {purchase.products?.map((product, index) => (
               <div key={index} className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0">
                 <div className="flex-1 pr-4">
                   <p className="text-sm font-black text-slate-900 mb-0.5">{product.product_name}</p>

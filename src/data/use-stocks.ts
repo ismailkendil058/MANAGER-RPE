@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 // @ts-ignore
-import { getAllTableRecords, saveLocally } from '../local-first/storage.js';
+import { getAllTableRecords, saveLocally, syncAndPruneLocalDB } from '../local-first/storage.js';
 import { mergeUnsyncedRecords } from '@/local-first/merge-offline-data';
 
 export interface Product {
@@ -53,6 +53,9 @@ export const useStocks = () => {
     }
 
     const products = data ?? [];
+
+    await syncAndPruneLocalDB('products', products.map((p: any) => p.id));
+
     const merged = await mergeUnsyncedRecords<Product>('products', products as Product[]);
     setStocksState(merged);
 
@@ -120,6 +123,7 @@ export const useStocks = () => {
 
   const deleteStock = async (id: string) => {
     setStocksState(prev => prev.filter(s => s.id !== id));
+    localStorage.setItem('erp_products', JSON.stringify(stocksState.filter(s => s.id !== id)));
 
     if (navigator.onLine) {
       try {

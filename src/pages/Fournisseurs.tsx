@@ -229,7 +229,7 @@ const Fournisseurs = () => {
                                         </div>
                                     </div>
                                     <div className="space-y-1 mb-2">
-                                        {purchase.products.map((p, i) => (
+                                        {purchase.products?.map((p, i) => (
                                             <div key={i} className="flex items-center justify-between text-[11px]">
                                                 <span className="text-muted-foreground">{p.product_name} × {p.quantity} kg</span>
                                                 <span className="font-medium">{formatDA(p.total)}</span>

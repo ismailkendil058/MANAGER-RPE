@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 // @ts-ignore
-import { getAllTableRecords, saveLocally } from '../local-first/storage.js';
+import { getAllTableRecords, saveLocally, syncAndPruneLocalDB } from '../local-first/storage.js';
 import { persistLocalProductQuantity } from '@/local-first/product-cache';
 import { mergeUnsyncedRecords } from '@/local-first/merge-offline-data';
 
@@ -36,8 +36,13 @@ export const useSales = () => {
     setLoading(true);
 
     if (!navigator.onLine) {
-      const localCache = localStorage.getItem('erp_sales');
-      if (localCache) setSalesState(JSON.parse(localCache));
+      const cached = await getAllTableRecords('sales');
+      if (cached && cached.length > 0) {
+        setSalesState(cached as Sale[]);
+      } else {
+        const localCache = localStorage.getItem('erp_sales');
+        if (localCache) setSalesState(JSON.parse(localCache));
+      }
       setLoading(false);
       fetchingRef.current = false;
       return;
@@ -75,9 +80,17 @@ export const useSales = () => {
       })),
     }));
 
+    await syncAndPruneLocalDB('sales', formatted.map((s: any) => s.id));
+
     const merged = await mergeUnsyncedRecords<Sale>('sales', formatted);
     setSalesState(merged);
     localStorage.setItem('erp_sales', JSON.stringify(merged));
+
+    // Offline mirror: persist all sales into local IndexedDB
+    for (const sale of merged) {
+      await saveLocally('sales', sale.id, sale, 'update');
+    }
+
     setLoading(false);
     fetchingRef.current = false;
   };
@@ -147,8 +160,13 @@ export const useSales = () => {
         }
 
         await saveLocally('sales', saleId, {
-          id: saleId, date: newSale.date, client_id: newSale.client_id,
-          client_name: newSale.client_name, total: newSale.total, status: newSale.status
+          id: saleId,
+          date: newSale.date,
+          client_id: newSale.client_id,
+          client_name: newSale.client_name,
+          total: newSale.total,
+          status: newSale.status,
+          products: newSale.products
         }, 'create');
       } catch (err) {
         console.error('Direct Supabase write failed, falling back to local queue:', err);
@@ -242,5 +260,22 @@ export const useSales = () => {
     }
   };
 
-  return { salesState, loading, fetchSales, addSale, returnSale };
+  const deleteSale = async (id: string) => {
+    setSalesState(prev => prev.filter(s => s.id !== id));
+    localStorage.setItem('erp_sales', JSON.stringify(salesState.filter(s => s.id !== id)));
+
+    if (navigator.onLine) {
+      try {
+        const { error } = await supabase.from('sales').delete().eq('id', id);
+        if (error) throw error;
+      } catch (err) {
+        console.error('Direct deleteSale failed, queuing locally:', err);
+        await saveLocally('sales', id, null, 'delete');
+      }
+    } else {
+      await saveLocally('sales', id, null, 'delete');
+    }
+  };
+
+  return { salesState, loading, fetchSales, addSale, returnSale, deleteSale };
 };

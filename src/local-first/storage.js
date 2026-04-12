@@ -107,3 +107,26 @@ export const markAsSynced = async (id, serverUpdatedAt = null) => {
         tx.onerror = () => reject(tx.error);
     });
 };
+
+export const syncAndPruneLocalDB = async (tableName, remoteIdsArray) => {
+    const remoteIds = new Set(remoteIdsArray);
+    const db = await openLocalDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.getAll();
+        req.onsuccess = () => {
+            const all = req.result || [];
+            all.forEach(record => {
+                if (record.table === tableName) {
+                    // if it's already synced and NOT in Supabase anymore, it was deleted on Supabase
+                    if (!remoteIds.has(record.id) && record.synced === true) {
+                        store.delete(record.id);
+                    }
+                }
+            });
+            resolve();
+        };
+        req.onerror = () => reject(tx.error);
+    });
+};

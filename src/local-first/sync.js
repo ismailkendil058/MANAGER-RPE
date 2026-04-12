@@ -46,27 +46,26 @@ export const syncToSupabase = async () => {
                     await fetchSupabase(`/${record.table}?id=eq.${record.id}`, { method: 'DELETE' });
                 } else if (record.action === 'update') {
                     // PATCH / update existing row
+                    const bodyData = { ...record.data, updated_at: record.updated_at };
+                    if (bodyData.products) delete bodyData.products; // Supabase doesn't accept nested arrays
+
                     await fetchSupabase(
                         `/${record.table}?id=eq.${record.id}`,
                         {
                             method: 'PATCH',
                             headers: { 'Prefer': 'return=representation' },
-                            body: JSON.stringify({
-                                ...record.data,
-                                updated_at: record.updated_at
-                            })
+                            body: JSON.stringify(bodyData)
                         }
                     );
                 } else {
                     // INSERT / create — use UPSERT to avoid duplicates
+                    const bodyData = { id: record.id, ...record.data, updated_at: record.updated_at };
+                    if (bodyData.products) delete bodyData.products;
+
                     await fetchSupabase(`/${record.table}`, {
                         method: 'POST',
                         headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' },
-                        body: JSON.stringify({
-                            id: record.id,
-                            ...record.data,
-                            updated_at: record.updated_at
-                        })
+                        body: JSON.stringify(bodyData)
                     });
                 }
 

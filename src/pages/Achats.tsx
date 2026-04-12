@@ -311,7 +311,7 @@ const Achats = () => {
                     </div>
                   </div>
                   <div className="space-y-2 border-t border-slate-50 pt-3">
-                    {purchase.products.map((p, i) => (
+                    {purchase.products?.map((p, i) => (
                       <div key={i} className="flex items-center justify-between text-[11px]">
                         <span className="text-slate-500 font-medium">{p.product_name} × {p.quantity} kg</span>
                         <span className="text-slate-900 font-bold">{formatDA(p.total)}</span>

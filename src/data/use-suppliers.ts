@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 // @ts-ignore
-import { saveLocally, getAllTableRecords } from '../local-first/storage.js';
+import { saveLocally, getAllTableRecords, syncAndPruneLocalDB } from '../local-first/storage.js';
 import { mergeUnsyncedRecords } from '@/local-first/merge-offline-data';
 
 export interface Supplier {
@@ -59,6 +59,10 @@ export const useSuppliers = () => {
     }
 
     const suppliers = (data ?? []).map(normalizeSupplier);
+
+    // Prune deleted records
+    await syncAndPruneLocalDB('suppliers', suppliers.map(s => s.id));
+
     const merged = await mergeUnsyncedRecords<Supplier>('suppliers', suppliers);
     setSuppliersState(merged);
     localStorage.setItem('erp_suppliers', JSON.stringify(merged));
@@ -132,5 +136,22 @@ export const useSuppliers = () => {
     }
   };
 
-  return { suppliersState, loading, fetchSuppliers, addSupplier, updateSupplier };
+  const deleteSupplier = async (id: string) => {
+    setSuppliersState(prev => prev.filter(s => s.id !== id));
+    localStorage.setItem('erp_suppliers', JSON.stringify(suppliersState.filter(s => s.id !== id)));
+
+    if (navigator.onLine) {
+      try {
+        const { error } = await supabase.from('suppliers').delete().eq('id', id);
+        if (error) throw error;
+      } catch (err) {
+        console.error('Direct deleteSupplier failed, queuing locally:', err);
+        await saveLocally('suppliers', id, null, 'delete');
+      }
+    } else {
+      await saveLocally('suppliers', id, null, 'delete');
+    }
+  };
+
+  return { suppliersState, loading, fetchSuppliers, addSupplier, updateSupplier, deleteSupplier };
 };

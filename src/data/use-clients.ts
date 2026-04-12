@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 // @ts-ignore
-import { saveLocally, getAllTableRecords } from '../local-first/storage.js';
+import { saveLocally, getAllTableRecords, syncAndPruneLocalDB } from '../local-first/storage.js';
 import { mergeUnsyncedRecords } from '@/local-first/merge-offline-data';
 
 export interface Client {
@@ -59,6 +59,10 @@ export const useClients = () => {
     }
 
     const clients = (data ?? []).map(normalizeClient);
+
+    // Prune deleted records
+    await syncAndPruneLocalDB('clients', clients.map(c => c.id));
+
     const merged = await mergeUnsyncedRecords<Client>('clients', clients);
     setClientsState(merged);
     localStorage.setItem('erp_clients', JSON.stringify(merged));
@@ -132,5 +136,22 @@ export const useClients = () => {
     }
   };
 
-  return { clientsState, loading, fetchClients, addClient, updateClient };
+  const deleteClient = async (id: string) => {
+    setClientsState(prev => prev.filter(c => c.id !== id));
+    localStorage.setItem('erp_clients', JSON.stringify(clientsState.filter(c => c.id !== id)));
+
+    if (navigator.onLine) {
+      try {
+        const { error } = await supabase.from('clients').delete().eq('id', id);
+        if (error) throw error;
+      } catch (err) {
+        console.error('Direct deleteClient failed, queuing locally:', err);
+        await saveLocally('clients', id, null, 'delete');
+      }
+    } else {
+      await saveLocally('clients', id, null, 'delete');
+    }
+  };
+
+  return { clientsState, loading, fetchClients, addClient, updateClient, deleteClient };
 };
