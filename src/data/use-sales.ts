@@ -277,5 +277,66 @@ export const useSales = () => {
     }
   };
 
-  return { salesState, loading, fetchSales, addSale, returnSale, deleteSale };
+  const updateSale = async (id: string, updatedSale: Partial<Sale>) => {
+    const oldSale = salesState.find(s => s.id === id);
+    if (!oldSale) return;
+
+    const newState = salesState.map(s => s.id === id ? { ...s, ...updatedSale } as Sale : s);
+    setSalesState(newState);
+    localStorage.setItem('erp_sales', JSON.stringify(newState));
+
+    if (navigator.onLine) {
+      try {
+        // Update main sale record
+        if (updatedSale.client_name || updatedSale.date || updatedSale.total !== undefined) {
+          await supabase.from('sales').update({
+            date: updatedSale.date,
+            client_name: updatedSale.client_name,
+            total: updatedSale.total,
+          }).eq('id', id);
+        }
+
+        // If products are updated, revert old stock and apply new stock
+        if (updatedSale.products) {
+          // Revert old stock
+          for (const item of oldSale.products) {
+            const { data: productData } = await supabase.from('products').select('quantity').eq('id', item.product_id).single();
+            if (productData) {
+              await supabase.from('products').update({ quantity: productData.quantity + item.quantity }).eq('id', item.product_id);
+            }
+          }
+          // Delete old items
+          await supabase.from('sale_items').delete().eq('sale_id', id);
+
+          // Insert new items
+          await supabase.from('sale_items').insert(
+            updatedSale.products.map(item => ({
+              sale_id: id,
+              product_id: item.product_id,
+              product_name: item.product_name,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              total: item.total,
+            }))
+          );
+
+          // Apply new stock
+          for (const item of updatedSale.products) {
+            const { data: productData } = await supabase.from('products').select('quantity').eq('id', item.product_id).single();
+            if (productData) {
+              const newQty = Math.max(0, productData.quantity - item.quantity);
+              await supabase.from('products').update({ quantity: newQty }).eq('id', item.product_id);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Update failed, queuing locally:', err);
+        await saveLocally('sales', id, updatedSale, 'update');
+      }
+    } else {
+      await saveLocally('sales', id, updatedSale, 'update');
+    }
+  };
+
+  return { salesState, loading, fetchSales, addSale, returnSale, deleteSale, updateSale };
 };

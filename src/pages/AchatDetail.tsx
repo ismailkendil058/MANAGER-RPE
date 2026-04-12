@@ -1,15 +1,93 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ShoppingBag, ArrowLeft, Calendar, Truck, Package, Printer } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ShoppingBag, ArrowLeft, Calendar, Building2, Package, Printer, Trash2, Edit, X, Check, Plus } from 'lucide-react';
 import { formatDA } from '@/data/mock-data';
 import { usePurchases } from '@/data/use-purchases';
+import { useStocks } from '@/data/use-stocks';
+import { useSuppliers } from '@/data/use-suppliers';
+
+interface LineItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
 
 const AchatDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { purchasesState: purchases } = usePurchases();
+  const { purchasesState: purchases, deletePurchase, updatePurchase } = usePurchases();
+  const { stocksState } = useStocks();
+  const { suppliersState: suppliersList } = useSuppliers();
   const [purchase, setPurchase] = useState<any | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const [editingPurchase, setEditingPurchase] = useState(false);
+  const [supplier, setSupplier] = useState('');
+  const [lines, setLines] = useState<LineItem[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const grandTotal = lines.reduce((sum, l) => sum + l.total, 0);
+
+  const updateLine = (index: number, field: keyof LineItem, value: string | number) => {
+    setLines(prev => {
+      const updated = [...prev];
+      const line = { ...updated[index], [field]: value };
+      if (field === 'productId') {
+        const product = stocksState.find(p => p.id === String(value));
+        if (product) line.productName = product.name;
+      }
+      if (field === 'quantity' || field === 'unitPrice') {
+        line.quantity = field === 'quantity' ? Number(value) : line.quantity;
+        line.unitPrice = field === 'unitPrice' ? Number(value) : line.unitPrice;
+        line.total = line.unitPrice * line.quantity;
+      }
+      updated[index] = line;
+      return updated;
+    });
+  };
+
+  const addLine = () => setLines(prev => [...prev, { productId: '', productName: '', quantity: 1, unitPrice: 0, total: 0 }]);
+  const removeLine = (index: number) => setLines(prev => prev.filter((_, i) => i !== index));
+
+  const handleEditClick = () => {
+    setSupplier(suppliersList.find(s => s.name === purchase.supplier_name)?.name || purchase.supplier_name);
+    setLines(purchase.products.map((p: any) => ({
+      productId: p.product_id,
+      productName: p.product_name,
+      quantity: p.quantity,
+      unitPrice: p.unit_price,
+      total: p.total
+    })));
+    setEditingPurchase(true);
+  };
+
+  const submitEdit = async () => {
+    if (!supplier.trim() || lines.some(l => !l.productId) || isSubmitting) return;
+    setIsSubmitting(true);
+    const supplierRecord = suppliersList.find(s => s.name === supplier);
+    try {
+      await updatePurchase(purchase.id, {
+        supplier_id: supplierRecord ? supplierRecord.id : purchase.supplier_id,
+        supplier_name: supplier,
+        total: grandTotal,
+        products: lines.map(l => ({
+          product_id: l.productId,
+          product_name: l.productName,
+          quantity: l.quantity,
+          unit_price: l.unitPrice,
+          total: l.total
+        }))
+      });
+      setEditingPurchase(false);
+    } catch (e) {
+      console.error(e);
+    }
+    setIsSubmitting(false);
+  };
 
   useEffect(() => {
     if (id) {
@@ -136,6 +214,25 @@ const AchatDetail = () => {
           >
             <Printer className="w-5 h-5" />
           </button>
+          <button
+            onClick={handleEditClick}
+            className="w-10 h-10 rounded-full bg-orange-50 text-orange-500 shadow-sm flex items-center justify-center active:scale-90 transition-transform"
+          >
+            <Edit className="w-5 h-5" />
+          </button>
+          <button
+            onClick={async () => {
+              if (window.confirm('Voulez-vous vraiment supprimer cet achat ?')) {
+                setIsDeleting(true);
+                await deletePurchase(purchase.id);
+                navigate('/achats');
+              }
+            }}
+            disabled={isDeleting}
+            className="w-10 h-10 rounded-full bg-red-50 text-red-600 shadow-sm flex items-center justify-center active:scale-90 transition-transform"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
           <div className="text-right">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Référence</p>
             <p className="text-sm font-black text-slate-900">#{purchase.id.substring(0, 8)}</p>
@@ -184,8 +281,108 @@ const AchatDetail = () => {
           <span className="text-2xl font-black text-primary tracking-tighter">{formatDA(purchase.total)}</span>
         </div>
 
-        <div className="absolute -right-4 -top-4 w-32 h-32 bg-primary/5 rounded-full blur-3xl" />
+        <div className="absolute -right-4 -top-4 w-32 h-32 bg-orange-500/5 rounded-full blur-3xl" />
       </div>
+
+      {createPortal(
+        <AnimatePresence>
+          {editingPurchase && (
+            <motion.div
+              initial={{ opacity: 0, y: '100%' }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-0 z-[100] bg-[#F9FBFF] flex flex-col"
+            >
+              <div className="h-20 px-6 border-b border-slate-100 flex items-center justify-between shrink-0 safe-area-top bg-white">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-orange-50 flex items-center justify-center">
+                    <Edit className="w-5 h-5 text-orange-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black">Modifier achat</h3>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-orange-500">#{purchase.id.substring(0, 8)}</p>
+                  </div>
+                </div>
+                <button onClick={() => setEditingPurchase(false)} className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center active:scale-90 transition-transform">
+                  <X className="w-5 h-5 text-slate-500" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-8 pb-32">
+                <div className="space-y-3">
+                  <label className="text-[11px] text-slate-400 font-black uppercase tracking-wider ml-1">Fournisseur</label>
+                  <select value={supplier} onChange={e => setSupplier(e.target.value)} className="w-full h-14 bg-white border-2 border-slate-50 rounded-[1.25rem] px-5 text-base font-semibold focus:border-orange-200 focus:ring-0 transition-all shadow-sm appearance-none">
+                    <option value="">Choisir un fournisseur...</option>
+                    {suppliersList.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                  </select>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between ml-1">
+                    <label className="text-[11px] text-slate-400 font-black uppercase tracking-wider">Articles commandés</label>
+                    <span className="text-[10px] font-black text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full">{lines.length} LIGNES</span>
+                  </div>
+                  <div className="space-y-6">
+                    {lines.map((line, i) => (
+                      <motion.div layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} key={i} className="premium-card p-4 relative border-l-4 border-l-orange-400">
+                        <div className="space-y-4">
+                          <select value={line.productId} onChange={e => updateLine(i, 'productId', e.target.value)} className="w-full h-12 bg-slate-50 border-none rounded-xl px-4 text-sm font-bold appearance-none">
+                            <option value="">Sélectionner produit...</option>
+                            {stocksState.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                          {line.productId && (
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1.5">
+                                <label className="text-[10px] text-slate-400 font-black uppercase ml-1">Qté (kg)</label>
+                                <input type="number" value={line.quantity || ''} onChange={e => updateLine(i, 'quantity', e.target.value)} className="w-full h-12 bg-slate-50 border-none rounded-xl px-4 text-sm font-black" />
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-[10px] text-slate-400 font-black uppercase ml-1">Prix (DA)</label>
+                                <input type="number" value={line.unitPrice || ''} onChange={e => updateLine(i, 'unitPrice', e.target.value)} className="w-full h-12 bg-slate-50 border-none rounded-xl px-4 text-sm font-black" />
+                              </div>
+                              <div className="col-span-2 pt-3 flex items-center justify-between border-t border-slate-50 mt-1">
+                                <span className="text-[10px] text-slate-400 font-black uppercase">Total ligne</span>
+                                <span className="text-sm font-black text-orange-500">{formatDA(line.total)}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        {lines.length > 1 && (
+                          <button onClick={() => removeLine(i)} className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-slate-900 text-white shadow-xl flex items-center justify-center active:scale-90 transition-transform">
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </motion.div>
+                    ))}
+                  </div>
+                  <button onClick={addLine} className="w-full h-16 rounded-[1.5rem] border-2 border-dashed border-slate-200 text-xs text-slate-400 font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-all hover:bg-slate-50">
+                    <Plus className="w-4 h-4" /> Ajouter un produit
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 bg-white border-t border-slate-100 shrink-0 safe-area-bottom shadow-[0_-10px_40px_rgba(0,0,0,0.02)]">
+                {grandTotal > 0 && (
+                  <div className="flex items-center justify-between mb-4 px-2">
+                    <span className="text-xs text-slate-400 font-black uppercase tracking-widest">TOTAL</span>
+                    <span className="text-2xl font-black text-slate-900 tracking-tighter">{formatDA(grandTotal)}</span>
+                  </div>
+                )}
+                <button
+                  onClick={submitEdit}
+                  disabled={lines.some(l => !l.productId) || isSubmitting}
+                  className={`w-full h-16 text-white rounded-[1.5rem] text-sm font-black flex items-center justify-center gap-3 active:scale-[0.98] transition-all shadow-xl disabled:opacity-40 disabled:active:scale-100 bg-orange-500 shadow-orange-500/20`}
+                >
+                  {isSubmitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check className="w-5 h-5" />}
+                  {isSubmitting ? 'ENREGISTREMENT...' : 'ENREGISTRER MODIFICATIONS'}
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </motion.div>
   );
 };

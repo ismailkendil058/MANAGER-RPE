@@ -219,14 +219,27 @@ const Stocks = () => {
                     <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full h-12 bg-slate-50 border-none rounded-xl px-4 text-sm font-bold" placeholder="Désignation" />
                     <input type="number" value={form.quantity || ''} onChange={e => setForm({ ...form, quantity: Number(e.target.value) })} className="w-full h-12 bg-slate-50 border-none rounded-xl px-4 text-sm font-bold" placeholder="Quantité (kg)" />
                   </div>
-                  <button
-                    onClick={handleSaveEdit}
-                    disabled={isSubmitting}
-                    className="w-full h-12 bg-slate-900 text-white rounded-xl text-xs font-bold active:scale-95 transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {isSubmitting && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-                    {isSubmitting ? 'Enregistrement...' : 'Enregistrer les modifications'}
-                  </button>
+                  <div className="flex justify-between gap-2">
+                    <button
+                      onClick={() => {
+                        if (window.confirm('Voulez-vous vraiment supprimer ce produit ?')) {
+                          handleDelete(product.id);
+                        }
+                      }}
+                      disabled={isSubmitting}
+                      className="h-12 w-16 bg-red-50 text-red-600 rounded-xl active:scale-95 transition-transform disabled:opacity-50 flex items-center justify-center shrink-0"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={handleSaveEdit}
+                      disabled={isSubmitting}
+                      className="flex-1 h-12 bg-slate-900 text-white rounded-xl text-xs font-bold active:scale-95 transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {isSubmitting && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                      {isSubmitting ? 'Enregistrement...' : 'Enregistrer'}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="flex items-center gap-4">

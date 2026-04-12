@@ -278,5 +278,61 @@ export const usePurchases = () => {
     }
   };
 
-  return { purchasesState, loading, fetchPurchases, addPurchase, returnPurchase, deletePurchase };
+  const updatePurchase = async (id: string, updatedPurchase: Partial<PurchaseOrder>) => {
+    const oldPurchase = purchasesState.find(p => p.id === id);
+    if (!oldPurchase) return;
+
+    const newState = purchasesState.map(p => p.id === id ? { ...p, ...updatedPurchase } as PurchaseOrder : p);
+    setPurchasesState(newState);
+    localStorage.setItem('erp_purchases', JSON.stringify(newState));
+
+    if (navigator.onLine) {
+      try {
+        if (updatedPurchase.supplier_name || updatedPurchase.date || updatedPurchase.total !== undefined) {
+          await supabase.from('purchases').update({
+            date: updatedPurchase.date,
+            supplier_id: updatedPurchase.supplier_id,
+            supplier_name: updatedPurchase.supplier_name,
+            total: updatedPurchase.total,
+          }).eq('id', id);
+        }
+
+        if (updatedPurchase.products) {
+          for (const item of oldPurchase.products) {
+            const { data: productData } = await supabase.from('products').select('quantity').eq('id', item.product_id).single();
+            if (productData) {
+              const newQty = Math.max(0, productData.quantity - item.quantity);
+              await supabase.from('products').update({ quantity: newQty }).eq('id', item.product_id);
+            }
+          }
+          await supabase.from('purchase_items').delete().eq('purchase_id', id);
+
+          await supabase.from('purchase_items').insert(
+            updatedPurchase.products.map(item => ({
+              purchase_id: id,
+              product_id: item.product_id,
+              product_name: item.product_name,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              total: item.total,
+            }))
+          );
+
+          for (const item of updatedPurchase.products) {
+            const { data: productData } = await supabase.from('products').select('quantity').eq('id', item.product_id).single();
+            if (productData) {
+              await supabase.from('products').update({ quantity: productData.quantity + item.quantity }).eq('id', item.product_id);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Update failed, queuing locally:', err);
+        await saveLocally('purchases', id, updatedPurchase, 'update');
+      }
+    } else {
+      await saveLocally('purchases', id, updatedPurchase, 'update');
+    }
+  };
+
+  return { purchasesState, loading, fetchPurchases, addPurchase, returnPurchase, deletePurchase, updatePurchase };
 };

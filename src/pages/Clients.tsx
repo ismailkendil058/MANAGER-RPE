@@ -10,10 +10,11 @@ const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } 
 const item = { hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.2 } } };
 
 const Clients = () => {
-  const { clientsState: clientList, loading: clientsLoading, fetchClients, addClient } = useClients();
+  const { clientsState: clientList, loading: clientsLoading, fetchClients, addClient, updateClient, deleteClient } = useClients();
   const { salesState: sharedSales, loading: salesLoading, fetchSales } = useSales();
   const [showForm, setShowForm] = useState(false);
   const [selectedClient, setSelectedClient] = useState<any | null>(null);
+  const [editingClient, setEditingClient] = useState(false);
   const [form, setForm] = useState({ name: '', phone: '', address: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -39,13 +40,24 @@ const Clients = () => {
   if (selectedClient) {
     return (
       <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
-        <button
-          onClick={() => setSelectedClient(null)}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground active:scale-95 transition-transform"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Retour
-        </button>
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setSelectedClient(null)}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground active:scale-95 transition-transform"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Retour
+          </button>
+          <button
+            onClick={() => {
+              setForm({ name: selectedClient.name, phone: selectedClient.phone || '', address: selectedClient.address || '' });
+              setEditingClient(true);
+            }}
+            className="text-[10px] font-black text-primary uppercase tracking-widest bg-primary/10 px-3 py-1.5 rounded-full active:scale-95 transition-transform"
+          >
+            Modifier Client
+          </button>
+        </div>
 
         <div className="glass-card p-4">
           <div className="flex items-center gap-3">
@@ -114,6 +126,103 @@ const Clients = () => {
             </div>
           )}
         </div>
+
+        {createPortal(
+          <AnimatePresence>
+            {editingClient && (
+              <motion.div
+                initial={{ opacity: 0, y: '100%' }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: '100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className="fixed inset-0 z-[100] bg-[#F9FBFF] flex flex-col"
+              >
+                <div className="h-20 px-6 border-b border-slate-100 flex items-center justify-between shrink-0 safe-area-top bg-white">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center">
+                      <UserPlus className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-black">Modifier client</h3>
+                      <p className="text-[10px] text-primary font-bold uppercase tracking-widest">{selectedClient.name}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setEditingClient(false)}
+                    className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center active:scale-90 transition-transform"
+                  >
+                    <X className="w-5 h-5 text-slate-500" />
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-6 space-y-8 pb-32">
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[11px] text-slate-400 font-black uppercase tracking-wider ml-1">Nom Complet</label>
+                      <input
+                        type="text"
+                        value={form.name}
+                        onChange={e => setForm({ ...form, name: e.target.value })}
+                        className="w-full h-14 bg-white border-2 border-slate-100 rounded-[1.25rem] px-5 text-base font-semibold focus:border-primary/20 focus:ring-0 transition-all shadow-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[11px] text-slate-400 font-black uppercase tracking-wider ml-1">Téléphone</label>
+                      <input
+                        type="tel"
+                        value={form.phone}
+                        onChange={e => setForm({ ...form, phone: e.target.value })}
+                        className="w-full h-14 bg-white border-2 border-slate-100 rounded-[1.25rem] px-5 text-base font-semibold focus:border-primary/20 focus:ring-0 transition-all shadow-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[11px] text-slate-400 font-black uppercase tracking-wider ml-1">Adresse</label>
+                      <textarea
+                        rows={3}
+                        value={form.address}
+                        onChange={e => setForm({ ...form, address: e.target.value })}
+                        className="w-full bg-white border-2 border-slate-100 rounded-[1.25rem] p-5 text-base font-semibold focus:border-primary/20 focus:ring-0 transition-all shadow-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-6 bg-white border-t border-slate-100 shrink-0 safe-area-bottom shadow-[0_-10px_40px_rgba(0,0,0,0.02)] flex gap-3">
+                  <button
+                    onClick={async () => {
+                      if (window.confirm('Voulez-vous vraiment supprimer ce client ?')) {
+                        setIsSubmitting(true);
+                        await deleteClient(selectedClient.id);
+                        setIsSubmitting(false);
+                        setEditingClient(false);
+                        setSelectedClient(null);
+                      }
+                    }}
+                    disabled={isSubmitting}
+                    className="w-16 h-16 bg-red-50 text-red-600 rounded-[1.5rem] flex items-center justify-center shrink-0 active:scale-95 transition-transform disabled:opacity-40"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!form.name.trim() || isSubmitting) return;
+                      setIsSubmitting(true);
+                      await updateClient(selectedClient.id, form);
+                      setSelectedClient({ ...selectedClient, ...form });
+                      setIsSubmitting(false);
+                      setEditingClient(false);
+                    }}
+                    disabled={!form.name.trim() || isSubmitting}
+                    className="flex-1 h-16 bg-primary text-white rounded-[1.5rem] text-sm font-black flex items-center justify-center gap-3 active:scale-[0.98] transition-all disabled:opacity-40 shadow-xl shadow-primary/20"
+                  >
+                    {isSubmitting ? 'ENREGISTREMENT...' : 'ENREGISTRER'}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
       </motion.div>
     );
   }
