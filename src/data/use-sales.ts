@@ -22,6 +22,7 @@ export interface Sale {
   client_name: string;
   products: SaleLineItem[];
   total: number;
+  paid_amount?: number;
   status: 'completed' | 'pending' | 'returned';
 }
 
@@ -68,6 +69,7 @@ export const useSales = () => {
       client_id: s.client_id,
       client_name: s.client_name,
       total: s.total,
+      paid_amount: s.paid_amount,
       status: s.status,
       products: (s.sale_items ?? []).map((item: any) => ({
         id: item.id,
@@ -133,6 +135,7 @@ export const useSales = () => {
         if (newSale.products.length > 0) {
           const { error: itemsError } = await supabase.from('sale_items').insert(
             newSale.products.map(item => ({
+              id: `item-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
               sale_id: saleId,
               product_id: item.product_id,
               product_name: item.product_name,
@@ -151,7 +154,7 @@ export const useSales = () => {
 
             const currentQty = productData?.quantity || 0;
             const quantityChange = newSale.status === 'returned' ? item.quantity : -item.quantity;
-            const newQty = Math.max(0, currentQty + quantityChange);
+            const newQty = currentQty + quantityChange;
 
             await supabase.from('products').update({ quantity: newQty }).eq('id', item.product_id);
           } catch (stockErr) {
@@ -165,6 +168,7 @@ export const useSales = () => {
           client_id: newSale.client_id,
           client_name: newSale.client_name,
           total: newSale.total,
+          paid_amount: newSale.paid_amount,
           status: newSale.status,
           products: newSale.products
         }, 'create');
@@ -186,6 +190,7 @@ export const useSales = () => {
       client_id: newSale.client_id,
       client_name: newSale.client_name,
       total: newSale.total,
+      paid_amount: newSale.paid_amount,
       status: newSale.status,
       products: newSale.products,
     }, 'create');
@@ -206,7 +211,7 @@ export const useSales = () => {
       const prod = localProducts.find((p: any) => p.id === item.product_id);
       const currentQty = prod?.quantity || 0;
       const quantityChange = newSale.status === 'returned' ? item.quantity : -item.quantity;
-      const newQty = Math.max(0, currentQty + quantityChange);
+      const newQty = currentQty + quantityChange;
       await persistLocalProductQuantity(
         item.product_id,
         newQty,
@@ -288,7 +293,7 @@ export const useSales = () => {
     if (navigator.onLine) {
       try {
         // Update main sale record
-        if (updatedSale.client_name || updatedSale.date || updatedSale.total !== undefined) {
+        if (updatedSale.client_name || updatedSale.date || updatedSale.total !== undefined || updatedSale.paid_amount !== undefined) {
           await supabase.from('sales').update({
             date: updatedSale.date,
             client_name: updatedSale.client_name,
@@ -311,6 +316,7 @@ export const useSales = () => {
           // Insert new items
           await supabase.from('sale_items').insert(
             updatedSale.products.map(item => ({
+              id: `item-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
               sale_id: id,
               product_id: item.product_id,
               product_name: item.product_name,
@@ -324,7 +330,7 @@ export const useSales = () => {
           for (const item of updatedSale.products) {
             const { data: productData } = await supabase.from('products').select('quantity').eq('id', item.product_id).single();
             if (productData) {
-              const newQty = Math.max(0, productData.quantity - item.quantity);
+              const newQty = productData.quantity - item.quantity;
               await supabase.from('products').update({ quantity: newQty }).eq('id', item.product_id);
             }
           }

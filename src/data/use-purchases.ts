@@ -22,6 +22,7 @@ export interface PurchaseOrder {
   supplier_name: string;
   products: PurchaseItem[];
   total: number;
+  paid_amount?: number;
   status: 'completed' | 'pending' | 'returned';
 }
 
@@ -68,6 +69,7 @@ export const usePurchases = () => {
       supplier_id: p.supplier_id,
       supplier_name: p.supplier_name,
       total: p.total,
+      paid_amount: p.paid_amount,
       status: p.status,
       products: (p.purchase_items ?? []).map((item: any) => ({
         id: item.id,
@@ -134,6 +136,7 @@ export const usePurchases = () => {
         if (newPurchase.products.length > 0) {
           const { error: itemsError } = await supabase.from('purchase_items').insert(
             newPurchase.products.map(item => ({
+              id: `item-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
               purchase_id: purchaseId,
               product_id: item.product_id,
               product_name: item.product_name,
@@ -152,7 +155,7 @@ export const usePurchases = () => {
 
             const currentQty = productData?.quantity || 0;
             const quantityChange = newPurchase.status === 'returned' ? -item.quantity : item.quantity;
-            const newQty = Math.max(0, currentQty + quantityChange);
+            const newQty = currentQty + quantityChange;
 
             await supabase.from('products').update({ quantity: newQty }).eq('id', item.product_id);
           } catch (stockErr) {
@@ -166,6 +169,7 @@ export const usePurchases = () => {
           supplier_id: newPurchase.supplier_id,
           supplier_name: newPurchase.supplier_name,
           total: newPurchase.total,
+          paid_amount: newPurchase.paid_amount,
           status: newPurchase.status,
           products: newPurchase.products
         }, 'create');
@@ -187,6 +191,7 @@ export const usePurchases = () => {
       supplier_id: newPurchase.supplier_id,
       supplier_name: newPurchase.supplier_name,
       total: newPurchase.total,
+      paid_amount: newPurchase.paid_amount,
       status: newPurchase.status,
       products: newPurchase.products,
     }, 'create');
@@ -207,7 +212,7 @@ export const usePurchases = () => {
       const prod = localProducts.find((p: any) => p.id === item.product_id);
       const currentQty = prod?.quantity || 0;
       const quantityChange = newPurchase.status === 'returned' ? -item.quantity : item.quantity;
-      const newQty = Math.max(0, currentQty + quantityChange);
+      const newQty = currentQty + quantityChange;
       await persistLocalProductQuantity(
         item.product_id,
         newQty,
@@ -237,7 +242,7 @@ export const usePurchases = () => {
           const { data: productData } = await supabase
             .from('products').select('quantity').eq('id', item.product_id).single();
           const currentQty = productData?.quantity || 0;
-          const newQty = Math.max(0, currentQty - item.quantity);
+          const newQty = currentQty - item.quantity;
           await supabase.from('products').update({ quantity: newQty }).eq('id', item.product_id);
         }
       } catch (err) {
@@ -250,7 +255,7 @@ export const usePurchases = () => {
       for (const item of purchase.products) {
         const prod = localProducts.find((p: any) => p.id === item.product_id);
         const currentQty = prod?.quantity || 0;
-        const newQty = Math.max(0, currentQty - item.quantity);
+        const newQty = currentQty - item.quantity;
         await persistLocalProductQuantity(
           item.product_id,
           newQty,
@@ -288,7 +293,7 @@ export const usePurchases = () => {
 
     if (navigator.onLine) {
       try {
-        if (updatedPurchase.supplier_name || updatedPurchase.date || updatedPurchase.total !== undefined) {
+        if (updatedPurchase.supplier_name || updatedPurchase.date || updatedPurchase.total !== undefined || updatedPurchase.paid_amount !== undefined) {
           await supabase.from('purchases').update({
             date: updatedPurchase.date,
             supplier_id: updatedPurchase.supplier_id,
@@ -301,7 +306,7 @@ export const usePurchases = () => {
           for (const item of oldPurchase.products) {
             const { data: productData } = await supabase.from('products').select('quantity').eq('id', item.product_id).single();
             if (productData) {
-              const newQty = Math.max(0, productData.quantity - item.quantity);
+              const newQty = productData.quantity - item.quantity;
               await supabase.from('products').update({ quantity: newQty }).eq('id', item.product_id);
             }
           }
@@ -309,6 +314,7 @@ export const usePurchases = () => {
 
           await supabase.from('purchase_items').insert(
             updatedPurchase.products.map(item => ({
+              id: `item-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
               purchase_id: id,
               product_id: item.product_id,
               product_name: item.product_name,

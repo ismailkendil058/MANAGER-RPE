@@ -23,7 +23,7 @@ const Achats = () => {
   const navigate = useNavigate();
   const { purchasesState: purchases, loading: purchasesLoading, fetchPurchases, addPurchase, returnPurchase } = usePurchases();
   const { stocksState, loading: stocksLoading, fetchStocks } = useStocks();
-  const { suppliersState, loading: suppliersLoading, fetchSuppliers, addSupplier } = useSuppliers();
+  const { suppliersState, loading: suppliersLoading, fetchSuppliers, addSupplier, updateSupplier } = useSuppliers();
   const [showForm, setShowForm] = useState(false);
   const [isRetour, setIsRetour] = useState(false);
 
@@ -35,6 +35,7 @@ const Achats = () => {
   const [showAddSupplier, setShowAddSupplier] = useState(false);
   const [newSupplierName, setNewSupplierName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [amountPaid, setAmountPaid] = useState<number | ''>('');
   const totalPurchases = purchases.reduce((sum, p) => sum + p.total, 0);
 
   const grouped = purchases.reduce<Record<string, typeof purchases>>((acc, purchase) => {
@@ -74,6 +75,7 @@ const Achats = () => {
     setSupplier('');
     setLines([{ productId: '', productName: '', quantity: 1, unitPrice: 0, total: 0 }]);
     setNewSupplierName('');
+    setAmountPaid('');
     setShowAddSupplier(false);
     setShowForm(false);
     setIsRetour(false);
@@ -99,6 +101,9 @@ const Achats = () => {
     const today = new Date().toISOString().split('T')[0];
     const supplierRecord = suppliersState.find(s => s.id === supplier);
 
+    const paidAmountValue = amountPaid === '' ? grandTotal : Number(amountPaid);
+    const credit = grandTotal - paidAmountValue;
+
     const newPurchase = {
       date: today,
       supplier_id: supplier,
@@ -111,6 +116,7 @@ const Achats = () => {
         total: l.total,
       })),
       total: grandTotal,
+      paid_amount: paidAmountValue,
       status: isRetour ? ('returned' as const) : ('completed' as const),
     };
 
@@ -119,6 +125,15 @@ const Achats = () => {
         ...newPurchase,
         supplier_name: suppliersState.find(s => s.id === supplier)?.name || 'Inconnu'
       });
+      if (supplierRecord) {
+        // Similar to clients, if they owe us money or we owe them.
+        // In purchases, credit means we owe the supplier money.
+        await updateSupplier(supplierRecord.id, {
+          total_spent: supplierRecord.total_spent + grandTotal,
+          total_orders: supplierRecord.total_orders + 1,
+          credit_balance: (supplierRecord.credit_balance || 0) + (isRetour ? -credit : credit),
+        });
+      }
       await fetchStocks();
       await fetchSuppliers();
       resetForm();
@@ -253,10 +268,22 @@ const Achats = () => {
 
               <div className="p-6 bg-white border-t border-slate-100 shrink-0 safe-area-bottom shadow-[0_-10px_40px_rgba(0,0,0,0.02)]">
                 {grandTotal > 0 && (
-                  <div className="flex items-center justify-between mb-4 px-2">
-                    <span className="text-xs text-slate-400 font-black uppercase tracking-widest">DÉPENSE TOTALE</span>
-                    <span className="text-2xl font-black text-slate-900 tracking-tighter">{formatDA(grandTotal)}</span>
-                  </div>
+                  <>
+                    <div className="flex items-center justify-between mb-2 px-2">
+                      <span className="text-xs text-slate-400 font-black uppercase tracking-widest">DÉPENSE TOTALE</span>
+                      <span className="text-2xl font-black text-slate-900 tracking-tighter">{formatDA(grandTotal)}</span>
+                    </div>
+                    <div className="flex items-center justify-between mb-4 px-2">
+                      <label className="text-xs text-slate-400 font-black uppercase tracking-widest leading-none mt-1">MONTANT PAYÉ</label>
+                      <input
+                        type="number"
+                        placeholder={String(grandTotal)}
+                        value={amountPaid}
+                        onChange={e => setAmountPaid(e.target.value ? Number(e.target.value) : '')}
+                        className="w-1/2 h-10 bg-slate-50 border-none rounded-xl px-4 text-sm font-black text-right"
+                      />
+                    </div>
+                  </>
                 )}
                 <button
                   onClick={handleSubmit}
@@ -304,6 +331,9 @@ const Achats = () => {
                     </div>
                     <div className="text-right flex flex-col items-end gap-1.5 mt-1">
                       <p className="text-sm font-black text-slate-900 leading-none mb-1.5">{formatDA(purchase.total)}</p>
+                      {purchase.paid_amount !== undefined && purchase.paid_amount < purchase.total && (
+                        <span className="text-[10px] font-bold text-orange-500">Payé: {formatDA(purchase.paid_amount)} | Reste: {formatDA(purchase.total - purchase.paid_amount)}</span>
+                      )}
                       {purchase.status === 'returned' && (
                         <span className="text-[9px] font-black uppercase text-red-500 bg-red-50 px-2.5 py-1 rounded-full tracking-wider">Retourné</span>
                       )}

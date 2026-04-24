@@ -33,6 +33,7 @@ const Ventes = () => {
     { productId: '', productName: '', quantity: 1, unitPrice: 0, total: 0 },
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [amountPaid, setAmountPaid] = useState<number | ''>('');
 
   const totalSales = sales.reduce((sum, s) => sum + s.total, 0);
 
@@ -72,6 +73,7 @@ const Ventes = () => {
   const resetForm = () => {
     setClient('');
     setLines([{ productId: '', productName: '', quantity: 1, unitPrice: 0, total: 0 }]);
+    setAmountPaid('');
     setShowForm(false);
     setIsRetour(false);
   };
@@ -82,6 +84,9 @@ const Ventes = () => {
     const today = new Date().toISOString().split('T')[0];
 
     const clientRecord = clientsList.find(c => c.name === client);
+
+    const paidAmountValue = amountPaid === '' ? grandTotal : Number(amountPaid);
+    const credit = grandTotal - paidAmountValue;
 
     const newSale = {
       date: today,
@@ -95,6 +100,7 @@ const Ventes = () => {
         total: l.total,
       })),
       total: grandTotal,
+      paid_amount: paidAmountValue,
       status: isRetour ? ('returned' as const) : ('completed' as const),
     };
 
@@ -104,6 +110,7 @@ const Ventes = () => {
         await updateClient(clientRecord.id, {
           total_spent: clientRecord.total_spent + grandTotal,
           total_orders: clientRecord.total_orders + 1,
+          credit_balance: (clientRecord.credit_balance || 0) + (isRetour ? -credit : credit),
         });
       }
       await fetchStocks();
@@ -271,10 +278,22 @@ const Ventes = () => {
               {/* Form Footer */}
               <div className="p-6 bg-white border-t border-slate-100 shrink-0 safe-area-bottom shadow-[0_-10px_40px_rgba(0,0,0,0.02)]">
                 {grandTotal > 0 && (
-                  <div className="flex items-center justify-between mb-4 px-2">
-                    <span className="text-xs text-slate-400 font-black uppercase tracking-widest">TOTAL GÉNÉRAL</span>
-                    <span className="text-2xl font-black text-slate-900 tracking-tighter">{formatDA(grandTotal)}</span>
-                  </div>
+                  <>
+                    <div className="flex items-center justify-between mb-2 px-2">
+                      <span className="text-xs text-slate-400 font-black uppercase tracking-widest">TOTAL GÉNÉRAL</span>
+                      <span className="text-2xl font-black text-slate-900 tracking-tighter">{formatDA(grandTotal)}</span>
+                    </div>
+                    <div className="flex items-center justify-between mb-4 px-2">
+                      <label className="text-xs text-slate-400 font-black uppercase tracking-widest leading-none mt-1">MONTANT PAYÉ</label>
+                      <input
+                        type="number"
+                        placeholder={String(grandTotal)}
+                        value={amountPaid}
+                        onChange={e => setAmountPaid(e.target.value ? Number(e.target.value) : '')}
+                        className="w-1/2 h-10 bg-slate-50 border-none rounded-xl px-4 text-sm font-black text-right"
+                      />
+                    </div>
+                  </>
                 )}
                 <button
                   onClick={handleSubmit}
@@ -329,6 +348,9 @@ const Ventes = () => {
                       </div>
                       <div className="text-right flex flex-col items-end gap-1.5 mt-1">
                         <p className="text-sm font-black text-slate-900 leading-none mb-1.5">{formatDA(sale.total)}</p>
+                        {sale.paid_amount !== undefined && sale.paid_amount < sale.total && (
+                          <span className="text-[10px] font-bold text-orange-500">Payé: {formatDA(sale.paid_amount)} | Reste: {formatDA(sale.total - sale.paid_amount)}</span>
+                        )}
                         {sale.status === 'returned' && (
                           <span className="text-[9px] font-black uppercase text-red-500 bg-red-50 px-2.5 py-1 rounded-full tracking-wider">Retourné</span>
                         )}

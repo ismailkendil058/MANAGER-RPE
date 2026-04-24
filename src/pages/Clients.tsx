@@ -15,6 +15,8 @@ const Clients = () => {
   const [showForm, setShowForm] = useState(false);
   const [selectedClient, setSelectedClient] = useState<any | null>(null);
   const [editingClient, setEditingClient] = useState(false);
+  const [showPayCredit, setShowPayCredit] = useState(false);
+  const [payAmount, setPayAmount] = useState<number | ''>('');
   const [form, setForm] = useState({ name: '', phone: '', address: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -78,6 +80,17 @@ const Clients = () => {
             <div>
               <p className="text-[10px] text-muted-foreground">Total dépensé</p>
               <p className="text-sm font-bold text-accent">{formatDA(selectedClient.total_spent)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground">Crédit (Dette)</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-bold text-orange-500">{formatDA(selectedClient.credit_balance || 0)}</p>
+                {(selectedClient.credit_balance || 0) > 0 && (
+                  <button onClick={() => setShowPayCredit(true)} className="text-[9px] font-black uppercase bg-green-50 text-green-600 px-2 py-1 rounded-full active:scale-95 transition-transform">
+                    Régler
+                  </button>
+                )}
+              </div>
             </div>
             <div className="text-right">
               <p className="text-[10px] text-muted-foreground">Commandes</p>
@@ -223,6 +236,63 @@ const Clients = () => {
           </AnimatePresence>,
           document.body
         )}
+
+        {createPortal(
+          <AnimatePresence>
+            {showPayCredit && (
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[110] bg-slate-900/40 flex items-center justify-center p-4"
+              >
+                <div className="bg-white rounded-3xl p-6 w-full max-w-sm">
+                  <h3 className="text-lg font-black mb-1">Régler le crédit</h3>
+                  <p className="text-xs text-slate-500 mb-6">Saisissez le montant payé par {selectedClient.name}.</p>
+
+                  <div className="space-y-4 mb-6">
+                    <div>
+                      <label className="text-[11px] text-slate-400 font-black uppercase">Montant (DA)</label>
+                      <input
+                        type="number"
+                        value={payAmount}
+                        onChange={e => setPayAmount(e.target.value ? Number(e.target.value) : '')}
+                        disabled={isSubmitting}
+                        className="w-full h-14 bg-slate-50 border-none rounded-2xl px-5 text-base font-bold text-slate-900 focus:ring-primary focus:ring-2 mt-1"
+                        placeholder="Ex: 5000"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => { setShowPayCredit(false); setPayAmount(''); }}
+                      disabled={isSubmitting}
+                      className="flex-1 h-12 bg-slate-100 text-slate-500 rounded-xl text-xs font-black uppercase active:scale-95 transition-transform disabled:opacity-50"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!payAmount || Number(payAmount) <= 0) return;
+                        setIsSubmitting(true);
+                        const newCredit = Math.max(0, (selectedClient.credit_balance || 0) - Number(payAmount));
+                        await updateClient(selectedClient.id, { credit_balance: newCredit });
+                        setSelectedClient({ ...selectedClient, credit_balance: newCredit });
+                        setIsSubmitting(false);
+                        setShowPayCredit(false);
+                        setPayAmount('');
+                      }}
+                      disabled={!payAmount || Number(payAmount) <= 0 || isSubmitting}
+                      className="flex-1 h-12 bg-green-500 text-white rounded-xl text-xs font-black uppercase active:scale-[0.98] transition-all shadow-lg shadow-green-500/20 disabled:opacity-50"
+                    >
+                      {isSubmitting ? 'Traitement...' : 'Confirmer'}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
       </motion.div>
     );
   }
@@ -350,9 +420,12 @@ const Clients = () => {
                   </div>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-right flex flex-col items-end">
                 <p className="text-xs font-black text-slate-400 uppercase tracking-tighter">Solde</p>
                 <p className="text-sm font-black text-primary tracking-tighter">{formatDA(client.total_spent || 0)}</p>
+                {(client.credit_balance || 0) > 0 && (
+                  <p className="text-[10px] font-bold text-orange-500 mt-1">Crédit: {formatDA(client.credit_balance)}</p>
+                )}
               </div>
             </div>
 
