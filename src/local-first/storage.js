@@ -119,8 +119,11 @@ export const syncAndPruneLocalDB = async (tableName, remoteIdsArray) => {
             const all = req.result || [];
             all.forEach(record => {
                 if (record.table === tableName) {
-                    // if it's already synced and NOT in Supabase anymore, it was deleted on Supabase
-                    if (!remoteIds.has(record.id) && record.synced === true) {
+                    // Remove ANY local record (synced OR unsynced) whose ID no longer
+                    // exists in Supabase. Supabase is the source of truth when online.
+                    // Exception: keep 'create' actions for truly new offline records
+                    // that haven't been uploaded yet (they won't be in remoteIds yet).
+                    if (!remoteIds.has(record.id) && record.action !== 'create') {
                         store.delete(record.id);
                     }
                 }
