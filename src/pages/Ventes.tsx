@@ -348,9 +348,7 @@ const Ventes = () => {
                       </div>
                       <div className="text-right flex flex-col items-end gap-1.5 mt-1">
                         <p className="text-sm font-black text-slate-900 leading-none mb-1.5">{formatDA(sale.total)}</p>
-                        {sale.paid_amount !== undefined && sale.paid_amount < sale.total && (
-                          <span className="text-[10px] font-bold text-orange-500">Payé: {formatDA(sale.paid_amount)} | Reste: {formatDA(sale.total - sale.paid_amount)}</span>
-                        )}
+
                         {sale.status === 'returned' && (
                           <span className="text-[9px] font-black uppercase text-red-500 bg-red-50 px-2.5 py-1 rounded-full tracking-wider">Retourné</span>
                         )}
